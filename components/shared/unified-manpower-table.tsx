@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ManpowerRecord } from '@/lib/types/database';
 import { deleteManpowerRecord } from '@/lib/actions/manpower';
 import ManpowerForm from '../admin/manpower-form';
+import { PhotoZoomModal } from '../admin/photo-zoom-modal';
 import {
   Table,
   TableBody,
@@ -31,8 +32,16 @@ import {
   Pencil,
   Trash2,
   Search,
-  X
+  X,
+  Filter
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface UnifiedManpowerTableProps {
   data: ManpowerRecord[];
@@ -46,16 +55,20 @@ interface ProfileAvatarProps {
   advisorName?: string;
   codeNumber: string;
   size?: 'sm' | 'md';
+  onClick?: () => void;
 }
 
-function ProfileAvatar({ photoUrl, advisorName, codeNumber, size = 'md' }: ProfileAvatarProps) {
+function ProfileAvatar({ photoUrl, advisorName, codeNumber, size = 'md', onClick }: ProfileAvatarProps) {
   const dimensions = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
   const imageSize = size === 'sm' ? 32 : 40;
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
   if (photoUrl) {
     return (
-      <div className={`flex items-center justify-center ${dimensions} rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700`}>
+      <div
+        className={`flex items-center justify-center ${dimensions} rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-primary transition-all' : ''}`}
+        onClick={onClick}
+      >
         <Image
           src={photoUrl}
           alt={`${advisorName || codeNumber} profile`}
@@ -114,6 +127,7 @@ function ClassBadge({ advisorClass }: { advisorClass?: string }) {
 
 type SortField = 'advisor_name' | 'code_number' | 'date_hired' | 'birthday' | 'status' | 'class';
 type SortDirection = 'asc' | 'desc';
+type StatusFilter = 'active' | 'cancelled' | 'all';
 
 interface SortableHeaderProps {
   children: React.ReactNode;
@@ -169,17 +183,42 @@ export default function UnifiedManpowerTable({
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active'); // Default to Active
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [selectedRecord, setSelectedRecord] = useState<ManpowerRecord | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<ManpowerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [selectedPhotoRecord, setSelectedPhotoRecord] = useState<ManpowerRecord | null>(null);
 
   const isAdminMode = mode === 'admin';
 
-  // Filter data based on search query
+  // Helper function to determine if status is active or cancelled
+  const isActiveStatus = (status?: string): boolean => {
+    return status === 'Active';
+  };
+
+  const isCancelledStatus = (status?: string): boolean => {
+    const cancelledStatuses = ['Inactive', 'Terminated', 'Resigned', 'Retired', 'On Leave'];
+    return cancelledStatuses.includes(status || '');
+  };
+
+  // Filter data based on search query and status filter
   const filteredData = data.filter(record => {
+    // Apply status filter first
+    let statusMatch = true;
+    if (statusFilter === 'active') {
+      statusMatch = isActiveStatus(record.status);
+    } else if (statusFilter === 'cancelled') {
+      statusMatch = isCancelledStatus(record.status);
+    }
+    // If statusFilter is 'all', statusMatch remains true
+
+    if (!statusMatch) return false;
+
+    // Apply search filter
     if (!searchQuery.trim()) return true;
 
     const query = searchQuery.toLowerCase();
@@ -288,6 +327,11 @@ export default function UnifiedManpowerTable({
     setSearchQuery('');
   };
 
+  const clearFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('active'); // Reset to default
+  };
+
   return (
     <div className="space-y-4">
       {/* Header Section */}
@@ -308,35 +352,65 @@ export default function UnifiedManpowerTable({
         )}
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          placeholder="Search advisors..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 pr-10"
-        />
-        {searchQuery && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearSearch}
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        )}
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Search Bar */}
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search advisors..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearSearch}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+
+        {/* Status Filter */}
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-400" />
+          <Select value={statusFilter} onValueChange={(value: StatusFilter) => setStatusFilter(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Clear Filters Button */}
+          {(searchQuery || statusFilter !== 'active') && (
+            <Button variant="outline" size="sm" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Results Count */}
       {data.length > 0 && (
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {searchQuery ? (
+            {searchQuery || statusFilter !== 'active' ? (
               <>Showing {filteredData.length} of {data.length} advisor{data.length !== 1 ? 's' : ''}</>
             ) : (
               <>Showing {data.length} advisor{data.length !== 1 ? 's' : ''}</>
+            )}
+            {statusFilter !== 'all' && (
+              <span className="ml-1">
+                ({statusFilter === 'active' ? 'Active' : 'Cancelled'} only)
+              </span>
             )}
           </p>
         </div>
@@ -346,13 +420,18 @@ export default function UnifiedManpowerTable({
       {sortedData.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-8 text-center">
-            {searchQuery ? (
+            {searchQuery || statusFilter !== 'active' ? (
               <>
                 <p className="text-gray-500 dark:text-gray-400 mb-2">
-                  No advisors found matching &quot;{searchQuery}&quot;
+                  {searchQuery && statusFilter !== 'active'
+                    ? `No advisors found matching "${searchQuery}" with ${statusFilter} status`
+                    : searchQuery
+                    ? `No advisors found matching "${searchQuery}"`
+                    : `No ${statusFilter} advisors found`
+                  }
                 </p>
-                <Button variant="outline" onClick={clearSearch}>
-                  Clear search
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear filters
                 </Button>
               </>
             ) : (
@@ -410,6 +489,10 @@ export default function UnifiedManpowerTable({
                       advisorName={record.advisor_name}
                       codeNumber={record.code_number}
                       size={isAdminMode ? 'sm' : 'md'}
+                      onClick={record.photo_url ? () => {
+                        setSelectedPhotoRecord(record);
+                        setShowPhotoModal(true);
+                      } : undefined}
                     />
                   </TableCell>
                   <TableCell className="font-medium">
@@ -507,6 +590,17 @@ export default function UnifiedManpowerTable({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Photo Zoom Modal */}
+      {selectedPhotoRecord && selectedPhotoRecord.photo_url && (
+        <PhotoZoomModal
+          isOpen={showPhotoModal}
+          onOpenChange={setShowPhotoModal}
+          photoUrl={selectedPhotoRecord.photo_url}
+          advisorName={selectedPhotoRecord.advisor_name}
+          codeNumber={selectedPhotoRecord.code_number}
+        />
       )}
     </div>
   );

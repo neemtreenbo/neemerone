@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AdminPhotoUpload } from '@/components/admin/admin-photo-upload';
 
 interface ManpowerFormProps {
   isOpen: boolean;
@@ -69,6 +70,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const handleInputChange = (field: keyof ManpowerRecord, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -76,6 +78,10 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handlePhotoSelect = (file: File | null) => {
+    setPhotoFile(file);
   };
 
   const validateForm = (): boolean => {
@@ -121,6 +127,12 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
     try {
       let result;
 
+      // Create FormData for file upload if needed
+      const submitFormData = new FormData();
+      if (photoFile) {
+        submitFormData.append('photoFile', photoFile);
+      }
+
       if (mode === 'create') {
         const insertData: Insert<'manpower'> = {
           code_number: formData.code_number!,
@@ -136,7 +148,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
           unit_code: formData.unit_code || undefined,
           photo_url: formData.photo_url || undefined,
         };
-        result = await createManpowerRecord(insertData);
+        result = await createManpowerRecord(insertData, submitFormData);
       } else {
         const updateData: Update<'manpower'> = {
           advisor_name: formData.advisor_name || undefined,
@@ -151,7 +163,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
           unit_code: formData.unit_code || undefined,
           photo_url: formData.photo_url || undefined,
         };
-        result = await updateManpowerRecord(formData.code_number!, updateData);
+        result = await updateManpowerRecord(formData.code_number!, updateData, submitFormData);
       }
 
       if (result.success) {
@@ -172,6 +184,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
             unit_code: '',
             photo_url: ''
           });
+          setPhotoFile(null);
         }
       } else {
         setErrors({ general: result.message });
@@ -355,14 +368,24 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
             </div>
 
             <div className="col-span-1 md:col-span-2 space-y-2">
-              <Label htmlFor="photo_url">Photo URL</Label>
-              <Input
-                id="photo_url"
-                type="url"
-                value={formData.photo_url || ''}
-                onChange={(e) => handleInputChange('photo_url', e.target.value)}
-                placeholder="https://example.com/photo.jpg"
+              <Label>Advisor Photo</Label>
+              <AdminPhotoUpload
+                onFileSelect={handlePhotoSelect}
+                initialPhotoUrl={formData.photo_url}
+                disabled={isSubmitting}
               />
+              <div className="mt-2">
+                <Label htmlFor="photo_url" className="text-xs text-muted-foreground">Or enter photo URL manually:</Label>
+                <Input
+                  id="photo_url"
+                  type="url"
+                  value={formData.photo_url || ''}
+                  onChange={(e) => handleInputChange('photo_url', e.target.value)}
+                  placeholder="https://example.com/photo.jpg"
+                  className="mt-1"
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
           </div>
 

@@ -14,7 +14,10 @@ export interface ActionResult {
 /**
  * Create a new manpower record
  */
-export async function createManpowerRecord(data: Insert<'manpower'>): Promise<ActionResult> {
+export async function createManpowerRecord(
+  data: Insert<'manpower'>,
+  formData?: FormData
+): Promise<ActionResult> {
   const { isAdmin } = await checkAdminAccess();
 
   if (!isAdmin) {
@@ -24,9 +27,61 @@ export async function createManpowerRecord(data: Insert<'manpower'>): Promise<Ac
   const supabase = await createClient();
 
   try {
+    const finalData = { ...data };
+
+    // Handle photo upload if provided
+    if (formData) {
+      const photoFile = formData.get('photoFile') as File | null;
+      if (photoFile && photoFile.size > 0) {
+        // Validate file
+        if (photoFile.size > 5 * 1024 * 1024) {
+          return { success: false, message: 'Photo file size must be less than 5MB' };
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(photoFile.type)) {
+          return { success: false, message: 'Photo must be a valid image file (JPG, PNG, WebP)' };
+        }
+
+        try {
+          const fileExt = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const fileName = `${data.code_number}-${Date.now()}.${fileExt}`;
+
+          // Create a buffer from the file
+          const arrayBuffer = await photoFile.arrayBuffer();
+          const buffer = new Uint8Array(arrayBuffer);
+
+          // Upload to Supabase Storage - manpower-photos bucket
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('manpower-photos')
+            .upload(fileName, buffer, {
+              contentType: photoFile.type,
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error('Photo upload error:', uploadError);
+            return { success: false, message: `Failed to upload photo: ${uploadError.message}` };
+          }
+
+          if (uploadData) {
+            // Get public URL
+            const { data: publicUrlData } = supabase.storage
+              .from('manpower-photos')
+              .getPublicUrl(uploadData.path);
+
+            finalData.photo_url = publicUrlData.publicUrl;
+          }
+        } catch (uploadError) {
+          console.error('Photo processing error:', uploadError);
+          return { success: false, message: 'Failed to process photo. Please try again.' };
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('manpower')
-      .insert(data);
+      .insert(finalData);
 
     if (error) {
       console.error('Error creating manpower record:', error);
@@ -55,7 +110,8 @@ export async function createManpowerRecord(data: Insert<'manpower'>): Promise<Ac
  */
 export async function updateManpowerRecord(
   codeNumber: string,
-  data: Update<'manpower'>
+  data: Update<'manpower'>,
+  formData?: FormData
 ): Promise<ActionResult> {
   const { isAdmin } = await checkAdminAccess();
 
@@ -66,9 +122,78 @@ export async function updateManpowerRecord(
   const supabase = await createClient();
 
   try {
+    const finalData = { ...data };
+
+    // Handle photo upload if provided
+    if (formData) {
+      const photoFile = formData.get('photoFile') as File | null;
+      if (photoFile && photoFile.size > 0) {
+        // Validate file
+        if (photoFile.size > 5 * 1024 * 1024) {
+          return { success: false, message: 'Photo file size must be less than 5MB' };
+        }
+
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(photoFile.type)) {
+          return { success: false, message: 'Photo must be a valid image file (JPG, PNG, WebP)' };
+        }
+
+        try {
+          // Get existing record to potentially remove old photo
+          const { data: existingRecord } = await supabase
+            .from('manpower')
+            .select('photo_url')
+            .eq('code_number', codeNumber)
+            .single();
+
+          const fileExt = photoFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+          const fileName = `${codeNumber}-${Date.now()}.${fileExt}`;
+
+          // Create a buffer from the file
+          const arrayBuffer = await photoFile.arrayBuffer();
+          const buffer = new Uint8Array(arrayBuffer);
+
+          // Upload to Supabase Storage - manpower-photos bucket
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('manpower-photos')
+            .upload(fileName, buffer, {
+              contentType: photoFile.type,
+              upsert: false,
+            });
+
+          if (uploadError) {
+            console.error('Photo upload error:', uploadError);
+            return { success: false, message: `Failed to upload photo: ${uploadError.message}` };
+          }
+
+          if (uploadData) {
+            // Get public URL
+            const { data: publicUrlData } = supabase.storage
+              .from('manpower-photos')
+              .getPublicUrl(uploadData.path);
+
+            finalData.photo_url = publicUrlData.publicUrl;
+
+            // Remove old photo if it exists and is a storage URL
+            if (existingRecord?.photo_url && existingRecord.photo_url.includes('manpower-photos')) {
+              const oldPath = existingRecord.photo_url.split('/manpower-photos/')[1];
+              if (oldPath) {
+                await supabase.storage
+                  .from('manpower-photos')
+                  .remove([oldPath]);
+              }
+            }
+          }
+        } catch (uploadError) {
+          console.error('Photo processing error:', uploadError);
+          return { success: false, message: 'Failed to process photo. Please try again.' };
+        }
+      }
+    }
+
     const { error } = await supabase
       .from('manpower')
-      .update(data)
+      .update(finalData)
       .eq('code_number', codeNumber);
 
     if (error) {
