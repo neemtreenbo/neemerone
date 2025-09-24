@@ -10,7 +10,7 @@ interface ManpowerPageConfig {
 }
 
 interface ManpowerPageWrapperProps {
-  data: ManpowerRecord[];
+  data: (ManpowerRecord & { hierarchy_level?: string })[];
   config: ManpowerPageConfig;
 }
 

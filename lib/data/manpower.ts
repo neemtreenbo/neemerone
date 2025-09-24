@@ -47,41 +47,38 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
       };
     }
 
-    // Add hierarchy levels to each record
-    const dataWithHierarchy = await Promise.all(
-      (manpowerData || []).map(async (record) => {
-        let hierarchyLevel = '';
+    // For performance, batch get all subordinates once instead of per record
+    let allSubordinates: any[] = [];
+    if (userManpowerCode && manpowerData && manpowerData.length > 0) {
+      const { data: subordinatesData } = await supabase
+        .rpc('get_all_subordinates', { manager_code: userManpowerCode });
+      allSubordinates = subordinatesData || [];
+    }
 
-        if (userManpowerCode) {
-          if (record.code_number === userManpowerCode) {
-            // This is the current user - don't show level
-            hierarchyLevel = '';
+    // Add hierarchy levels to each record efficiently
+    const dataWithHierarchy = (manpowerData || []).map((record) => {
+      let hierarchyLevel = '';
+
+      if (userManpowerCode && record.code_number !== userManpowerCode) {
+        const subordinate = allSubordinates.find((sub: any) => sub.subordinate_code === record.code_number);
+
+        if (subordinate) {
+          const level = subordinate.level_depth;
+          if (level === 1) {
+            hierarchyLevel = 'Direct';
+          } else if (level === 2) {
+            hierarchyLevel = 'Indirect 1';
           } else {
-            // Check if this person reports directly or indirectly
-            const { data: subordinatesData } = await supabase
-              .rpc('get_all_subordinates', { manager_code: userManpowerCode });
-
-            const subordinate = subordinatesData?.find((sub: any) => sub.subordinate_code === record.code_number);
-
-            if (subordinate) {
-              const level = subordinate.level_depth;
-              if (level === 1) {
-                hierarchyLevel = 'Direct';
-              } else if (level === 2) {
-                hierarchyLevel = 'Indirect 1';
-              } else {
-                hierarchyLevel = 'Indirect 2';
-              }
-            }
+            hierarchyLevel = 'Indirect 2';
           }
         }
+      }
 
-        return {
-          ...record,
-          hierarchy_level: hierarchyLevel
-        };
-      })
-    );
+      return {
+        ...record,
+        hierarchy_level: hierarchyLevel
+      };
+    });
 
     return {
       data: dataWithHierarchy as (ManpowerRecord & { hierarchy_level?: string })[],
