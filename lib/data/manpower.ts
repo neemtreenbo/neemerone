@@ -4,18 +4,36 @@ import { createClient } from '@/lib/supabase/server';
 import { ManpowerRecord } from '@/lib/types/database';
 
 export interface ManpowerDataResult {
-  data: ManpowerRecord[] | null;
+  data: (ManpowerRecord & { hierarchy_level?: string })[] | null;
   error: Error | null;
 }
 
 /**
- * Fetch manpower data from Supabase
+ * Fetch manpower data from Supabase with hierarchy levels
  * RLS policies automatically filter records based on user hierarchy
  */
 export async function fetchManpowerData(): Promise<ManpowerDataResult> {
   try {
     const supabase = await createClient();
 
+    // Get current user info to determine hierarchy levels
+    const { data: user } = await supabase.auth.getClaims();
+    const userId = user?.claims?.sub || null;
+
+    let userManpowerCode: string | null = null;
+
+    // Get user's manpower code if they have one
+    if (userId) {
+      const { data: manpowerLink } = await supabase
+        .from('manpower')
+        .select('code_number')
+        .eq('profile_user_id', userId)
+        .single();
+
+      userManpowerCode = manpowerLink?.code_number || null;
+    }
+
+    // Fetch manpower data - RLS will filter automatically
     const { data: manpowerData, error: dataError } = await supabase
       .from('manpower')
       .select('*')
@@ -29,8 +47,44 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
       };
     }
 
+    // Add hierarchy levels to each record
+    const dataWithHierarchy = await Promise.all(
+      (manpowerData || []).map(async (record) => {
+        let hierarchyLevel = '';
+
+        if (userManpowerCode) {
+          if (record.code_number === userManpowerCode) {
+            // This is the current user - don't show level
+            hierarchyLevel = '';
+          } else {
+            // Check if this person reports directly or indirectly
+            const { data: subordinatesData } = await supabase
+              .rpc('get_all_subordinates', { manager_code: userManpowerCode });
+
+            const subordinate = subordinatesData?.find((sub: any) => sub.subordinate_code === record.code_number);
+
+            if (subordinate) {
+              const level = subordinate.level_depth;
+              if (level === 1) {
+                hierarchyLevel = 'Direct';
+              } else if (level === 2) {
+                hierarchyLevel = 'Indirect 1';
+              } else {
+                hierarchyLevel = 'Indirect 2';
+              }
+            }
+          }
+        }
+
+        return {
+          ...record,
+          hierarchy_level: hierarchyLevel
+        };
+      })
+    );
+
     return {
-      data: (manpowerData || []) as ManpowerRecord[],
+      data: dataWithHierarchy as (ManpowerRecord & { hierarchy_level?: string })[],
       error: null
     };
   } catch (error) {

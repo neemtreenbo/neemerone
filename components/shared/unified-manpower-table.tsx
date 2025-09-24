@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/select';
 
 interface UnifiedManpowerTableProps {
-  data: ManpowerRecord[];
+  data: (ManpowerRecord & { hierarchy_level?: string })[];
   mode?: 'admin' | 'regular';
   title?: string;
   description?: string;
@@ -125,7 +125,17 @@ function ClassBadge({ advisorClass }: { advisorClass?: string }) {
   return <Badge variant="outline">{advisorClass || 'Individual'}</Badge>;
 }
 
-type SortField = 'advisor_name' | 'code_number' | 'date_hired' | 'birthday' | 'status' | 'class';
+function HierarchyBadge({ level }: { level?: string }) {
+  if (!level) return null;
+
+  const variant = level === 'Direct' ? 'default' :
+                  level === 'Indirect 1' ? 'secondary' :
+                  'outline';
+
+  return <Badge variant={variant} className="text-xs">{level}</Badge>;
+}
+
+type SortField = 'advisor_name' | 'code_number' | 'date_hired' | 'birthday' | 'status' | 'class' | 'hierarchy_level';
 type SortDirection = 'asc' | 'desc';
 type StatusFilter = 'active' | 'cancelled' | 'all';
 
@@ -269,6 +279,10 @@ export default function UnifiedManpowerTable({
         aValue = a.class;
         bValue = b.class;
         break;
+      case 'hierarchy_level':
+        aValue = a.hierarchy_level;
+        bValue = b.hierarchy_level;
+        break;
     }
 
     if (!aValue && !bValue) return 0;
@@ -279,6 +293,20 @@ export default function UnifiedManpowerTable({
       const aDate = new Date(aValue);
       const bDate = new Date(bValue);
       const comparison = aDate.getTime() - bDate.getTime();
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    }
+
+    if (sortConfig.field === 'hierarchy_level') {
+      // Custom sorting for hierarchy levels: Direct < Indirect 1 < Indirect 2
+      const levelOrder: Record<string, number> = {
+        'Direct': 1,
+        'Indirect 1': 2,
+        'Indirect 2': 3
+      };
+
+      const aOrder = levelOrder[aValue] || 999;
+      const bOrder = levelOrder[bValue] || 999;
+      const comparison = aOrder - bOrder;
       return sortConfig.direction === 'asc' ? comparison : -comparison;
     }
 
@@ -441,6 +469,9 @@ export default function UnifiedManpowerTable({
                 <SortableHeader field="advisor_name" currentSort={sortConfig} onSort={handleSort}>
                   Display Name
                 </SortableHeader>
+                <SortableHeader field="hierarchy_level" currentSort={sortConfig} onSort={handleSort}>
+                  Hierarchy
+                </SortableHeader>
                 <SortableHeader field="code_number" currentSort={sortConfig} onSort={handleSort}>
                   Code
                 </SortableHeader>
@@ -475,6 +506,13 @@ export default function UnifiedManpowerTable({
                         <div className="text-xs text-gray-500">({record.nickname})</div>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {record.hierarchy_level ? (
+                      <HierarchyBadge level={record.hierarchy_level} />
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {record.code_number}
