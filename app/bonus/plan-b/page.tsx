@@ -1,0 +1,8 @@
+export default function PlanB() {
+  return (
+    <div className="container mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Plan B</h1>
+      {/* Plan B bonus content will be implemented here */}
+    </div>
+  );
+}
