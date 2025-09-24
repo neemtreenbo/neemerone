@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ManpowerRecord } from '@/lib/types/database';
-import ManpowerTable from '@/components/manpower-table';
+import UnifiedManpowerTable from '@/components/shared/unified-manpower-table';
+import { getCurrentUserProfile } from '@/lib/auth';
 
 // This page requires authentication and database queries, so it cannot be statically generated
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,12 @@ export default async function Manpower() {
 
     if (!user?.claims) {
       redirect('/auth/login');
+    }
+
+    // Smart routing: If user is admin, redirect to admin manpower page
+    const { profile } = await getCurrentUserProfile();
+    if (profile?.app_role === 'admin') {
+      redirect('/admin/manpower');
     }
 
   // Fetch manpower data
@@ -55,19 +62,16 @@ export default async function Manpower() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manpower</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            View and manage advisor information from the manpower database.
+            View advisor information from the manpower database.
           </p>
         </div>
 
-        {manpower.length > 0 && (
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {manpower.length} advisor{manpower.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
-
-        <ManpowerTable data={manpower} />
+        <UnifiedManpowerTable
+          data={manpower}
+          mode="regular"
+          title="Advisor Directory"
+          description="Browse and search through advisor profiles, contact information, and key dates."
+        />
       </div>
     </div>
   );

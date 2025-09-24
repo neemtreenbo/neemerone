@@ -14,9 +14,7 @@ import {
   Calendar,
   Settings,
   LogOut,
-  User,
-  Shield,
-  UserCog
+  User
 } from 'lucide-react';
 import { UserAvatar, useUser } from '@/components/user-avatar';
 import { NavMenuItemComponent, NavMenuItem } from '@/components/nav-menu-item';
@@ -40,6 +38,11 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
+  // Smart navigation based on user role
+  const getManpowerHref = () => {
+    return profile?.app_role === 'admin' ? '/admin/manpower' : '/manpower';
+  };
+
   // Navigation menu structure
   const navigationItems: NavMenuItem[] = [
     {
@@ -49,7 +52,7 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
     },
     {
       label: 'Manpower',
-      href: '/manpower',
+      href: getManpowerHref(),
       icon: Users,
     },
     {
@@ -128,19 +131,10 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
     },
   ];
 
-  // Admin-specific navigation items
+  // Admin-specific navigation items (future admin features can be added here)
   const adminItems: NavMenuItem[] = profile?.app_role === 'admin' ? [
-    {
-      label: 'Admin Panel',
-      icon: Shield,
-      children: [
-        {
-          label: 'Manpower Management',
-          href: '/admin/manpower',
-          icon: UserCog,
-        },
-      ],
-    },
+    // Note: Manpower management is now handled via the main "Manpower" navigation
+    // Future admin-only features can be added here as needed
   ] : [];
 
   // Combine navigation items

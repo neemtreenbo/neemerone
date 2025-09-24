@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { checkAdminAccess } from '@/lib/auth';
 import { ManpowerRecord } from '@/lib/types/database';
-import AdminManpowerTable from '@/components/admin/manpower-table';
+import UnifiedManpowerTable from '@/components/shared/unified-manpower-table';
 
 // This page requires admin authentication and database queries, so it cannot be statically generated
 export const dynamic = 'force-dynamic';
@@ -61,15 +61,12 @@ export default async function AdminManpower() {
           </p>
         </div>
 
-        {manpower.length > 0 && (
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Managing {manpower.length} advisor record{manpower.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
-
-        <AdminManpowerTable data={manpower} />
+        <UnifiedManpowerTable
+          data={manpower}
+          mode="admin"
+          title="Manpower Management"
+          description="Manage advisor records, update information, and maintain the advisor database."
+        />
       </div>
     </div>
   );
