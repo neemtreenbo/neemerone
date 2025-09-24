@@ -56,12 +56,31 @@ export function ProfileAvatar({ photoUrl, advisorName, codeNumber, size = 'md', 
 export function StatusBadge({ status }: { status?: string }) {
   if (!status) return <Badge variant="secondary">Unknown</Badge>;
 
-  const variant = status === 'Active' ? 'default' :
-                  status === 'Inactive' ? 'secondary' :
-                  status === 'Terminated' || status === 'Resigned' ? 'destructive' :
+  const variant = status.toLowerCase() === 'active' ? 'default' :
+                  status.toLowerCase() === 'inactive' ? 'secondary' :
+                  status.toLowerCase() === 'terminated' || status.toLowerCase() === 'resigned' ? 'destructive' :
+                  status.toLowerCase() === 'cancelled' ? 'destructive' :
                   'outline';
 
   return <Badge variant={variant}>{status}</Badge>;
+}
+
+// Class Badge Component
+export function ClassBadge({ advisorClass }: { advisorClass?: string }) {
+  if (!advisorClass) return <Badge variant="outline">Individual</Badge>;
+
+  const variant = advisorClass.toLowerCase().includes('manager') ? 'default' :
+                  advisorClass.toLowerCase().includes('candidate') ? 'secondary' :
+                  'outline';
+
+  return <Badge variant={variant}>{advisorClass}</Badge>;
+}
+
+// Unit Code Display Component
+export function UnitCodeDisplay({ unitCode }: { unitCode?: string }) {
+  if (!unitCode) return <span className="text-gray-400 text-sm">-</span>;
+
+  return <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{unitCode}</span>;
 }
 
 // Hierarchy Badge Component
@@ -76,7 +95,7 @@ export function HierarchyBadge({ level }: { level?: string }) {
 }
 
 // Sortable Header Component
-export type SortField = 'advisor_name' | 'code_number' | 'date_hired' | 'birthday' | 'status' | 'class' | 'hierarchy_level';
+export type SortField = 'advisor_name' | 'code_number' | 'unit_code' | 'status' | 'class' | 'hierarchy_level' | 'date_hired' | 'birthday';
 export type SortDirection = 'asc' | 'desc';
 
 interface SortableHeaderProps {

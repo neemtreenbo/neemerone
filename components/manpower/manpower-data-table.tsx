@@ -26,6 +26,9 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
   ProfileAvatar,
   HierarchyBadge,
+  StatusBadge,
+  ClassBadge,
+  UnitCodeDisplay,
   SortableHeader,
   formatDate,
   type SortField,
@@ -108,13 +111,9 @@ export function ManpowerDataTable({
         aValue = a.code_number;
         bValue = b.code_number;
         break;
-      case 'date_hired':
-        aValue = a.date_hired;
-        bValue = b.date_hired;
-        break;
-      case 'birthday':
-        aValue = a.birthday;
-        bValue = b.birthday;
+      case 'unit_code':
+        aValue = a.unit_code;
+        bValue = b.unit_code;
         break;
       case 'status':
         aValue = a.status;
@@ -127,6 +126,14 @@ export function ManpowerDataTable({
       case 'hierarchy_level':
         aValue = a.hierarchy_level;
         bValue = b.hierarchy_level;
+        break;
+      case 'date_hired':
+        aValue = a.date_hired;
+        bValue = b.date_hired;
+        break;
+      case 'birthday':
+        aValue = a.birthday;
+        bValue = b.birthday;
         break;
     }
 
@@ -240,6 +247,15 @@ export function ManpowerDataTable({
               <SortableHeader field="code_number" currentSort={sortConfig} onSort={handleSort}>
                 Code
               </SortableHeader>
+              <SortableHeader field="unit_code" currentSort={sortConfig} onSort={handleSort}>
+                Unit Code
+              </SortableHeader>
+              <SortableHeader field="status" currentSort={sortConfig} onSort={handleSort}>
+                Status
+              </SortableHeader>
+              <SortableHeader field="class" currentSort={sortConfig} onSort={handleSort}>
+                Class
+              </SortableHeader>
               <SortableHeader field="date_hired" currentSort={sortConfig} onSort={handleSort}>
                 Date Hired
               </SortableHeader>
@@ -281,6 +297,15 @@ export function ManpowerDataTable({
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   {record.code_number}
+                </TableCell>
+                <TableCell>
+                  <UnitCodeDisplay unitCode={record.unit_code} />
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={record.status} />
+                </TableCell>
+                <TableCell>
+                  <ClassBadge advisorClass={record.class} />
                 </TableCell>
                 <TableCell>
                   {formatDate(record.date_hired)}
