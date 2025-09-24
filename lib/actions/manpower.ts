@@ -298,3 +298,38 @@ export async function getManpowerRecord(codeNumber: string): Promise<{
     };
   }
 }
+
+/**
+ * Delete a photo from storage
+ */
+export async function deleteManpowerPhoto(photoUrl: string): Promise<ActionResult> {
+  const { isAdmin } = await checkAdminAccess();
+
+  if (!isAdmin) {
+    return { success: false, message: 'Unauthorized: Admin access required' };
+  }
+
+  const supabase = await createClient();
+
+  try {
+    // Extract the file path from the URL
+    if (photoUrl.includes('manpower-photos')) {
+      const path = photoUrl.split('/manpower-photos/')[1];
+      if (path) {
+        const { error } = await supabase.storage
+          .from('manpower-photos')
+          .remove([path]);
+
+        if (error) {
+          console.error('Error deleting photo:', error);
+          return { success: false, message: 'Failed to delete photo from storage' };
+        }
+      }
+    }
+
+    return { success: true, message: 'Photo deleted successfully' };
+  } catch (error) {
+    console.error('Unexpected error deleting photo:', error);
+    return { success: false, message: 'An unexpected error occurred' };
+  }
+}

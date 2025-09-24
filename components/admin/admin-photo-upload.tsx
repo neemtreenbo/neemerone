@@ -10,6 +10,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 interface AdminPhotoUploadProps {
   onFileSelect: (file: File | null) => void;
+  onPhotoRemove?: (photoUrl: string) => Promise<void>;
   initialPhotoUrl?: string;
   className?: string;
   disabled?: boolean;
@@ -42,7 +43,7 @@ function centerAspectCrop(
   )
 }
 
-export function AdminPhotoUpload({ onFileSelect, initialPhotoUrl, className, disabled }: AdminPhotoUploadProps) {
+export function AdminPhotoUpload({ onFileSelect, onPhotoRemove, initialPhotoUrl, className, disabled }: AdminPhotoUploadProps) {
   const [uploadState, setUploadState] = useState<UploadState>({
     isUploading: false,
     uploadProgress: 0,
@@ -166,7 +167,22 @@ export function AdminPhotoUpload({ onFileSelect, initialPhotoUrl, className, dis
     setZoom(1);
   };
 
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
+    // If there's an initial photo URL and onPhotoRemove callback, call it to delete from storage/database
+    if (initialPhotoUrl && onPhotoRemove && !uploadState.previewUrl) {
+      try {
+        setUploadState(prev => ({ ...prev, isUploading: true }));
+        await onPhotoRemove(initialPhotoUrl);
+      } catch (error) {
+        setUploadState(prev => ({
+          ...prev,
+          error: 'Failed to remove photo',
+          isUploading: false
+        }));
+        return;
+      }
+    }
+
     setImageSrc('');
     setSelectedFile(null);
     setIsEditing(false);
@@ -174,7 +190,8 @@ export function AdminPhotoUpload({ onFileSelect, initialPhotoUrl, className, dis
     setUploadState(prev => ({
       ...prev,
       previewUrl: undefined,
-      error: null
+      error: null,
+      isUploading: false
     }));
     onFileSelect(null);
   };
@@ -296,7 +313,7 @@ export function AdminPhotoUpload({ onFileSelect, initialPhotoUrl, className, dis
                   variant="outline"
                   size="sm"
                   onClick={handleRemoveImage}
-                  disabled={disabled}
+                  disabled={disabled || uploadState.isUploading}
                 >
                   {uploadState.previewUrl ? 'Remove new photo' : 'Remove photo'}
                 </Button>

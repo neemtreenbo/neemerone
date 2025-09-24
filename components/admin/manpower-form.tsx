@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ManpowerRecord, Insert, Update } from '@/lib/types/database';
-import { createManpowerRecord, updateManpowerRecord } from '@/lib/actions/manpower';
+import { createManpowerRecord, updateManpowerRecord, deleteManpowerPhoto } from '@/lib/actions/manpower';
 import {
   Dialog,
   DialogContent,
@@ -48,25 +48,44 @@ const ADVISOR_CLASSES = [
 ];
 
 export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: ManpowerFormProps) {
-  const [formData, setFormData] = useState<Partial<ManpowerRecord>>(() => {
-    if (mode === 'edit' && record) {
-      return { ...record };
-    }
-    return {
-      code_number: '',
-      advisor_name: '',
-      nickname: '',
-      advisor_email: '',
-      personal_email: '',
-      mobile: '',
-      birthday: '',
-      date_hired: '',
-      status: 'Active',
-      class: 'Individual',
-      unit_code: '',
-      photo_url: ''
-    };
+  const [formData, setFormData] = useState<Partial<ManpowerRecord>>({
+    code_number: '',
+    advisor_name: '',
+    nickname: '',
+    advisor_email: '',
+    personal_email: '',
+    mobile: '',
+    birthday: '',
+    date_hired: '',
+    status: 'Active',
+    class: 'Individual',
+    unit_code: '',
+    photo_url: ''
   });
+
+  // Update form data when record or mode changes
+  useEffect(() => {
+    if (mode === 'edit' && record) {
+      setFormData({ ...record });
+    } else if (mode === 'create') {
+      setFormData({
+        code_number: '',
+        advisor_name: '',
+        nickname: '',
+        advisor_email: '',
+        personal_email: '',
+        mobile: '',
+        birthday: '',
+        date_hired: '',
+        status: 'Active',
+        class: 'Individual',
+        unit_code: '',
+        photo_url: ''
+      });
+    }
+    setPhotoFile(null);
+    setErrors({});
+  }, [mode, record, isOpen]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -82,6 +101,34 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
 
   const handlePhotoSelect = (file: File | null) => {
     setPhotoFile(file);
+  };
+
+  const handlePhotoRemove = async (photoUrl: string) => {
+    if (!record?.code_number) return;
+
+    try {
+      // Delete from storage
+      const deleteResult = await deleteManpowerPhoto(photoUrl);
+      if (!deleteResult.success) {
+        throw new Error(deleteResult.message);
+      }
+
+      // Update database record to remove photo_url
+      const updateResult = await updateManpowerRecord(record.code_number, {
+        photo_url: null
+      });
+
+      if (!updateResult.success) {
+        throw new Error(updateResult.message);
+      }
+
+      // Update form data
+      setFormData(prev => ({ ...prev, photo_url: '' }));
+
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      throw error;
+    }
   };
 
   const validateForm = (): boolean => {
@@ -371,6 +418,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
               <Label>Advisor Photo</Label>
               <AdminPhotoUpload
                 onFileSelect={handlePhotoSelect}
+                onPhotoRemove={mode === 'edit' ? handlePhotoRemove : undefined}
                 initialPhotoUrl={formData.photo_url}
                 disabled={isSubmitting}
               />

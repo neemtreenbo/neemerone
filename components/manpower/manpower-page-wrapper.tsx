@@ -74,15 +74,15 @@ export const MANPOWER_PAGE_CONFIGS = {
   regular: {
     mode: 'regular' as const,
     pageTitle: 'Manpower',
-    pageDescription: 'View advisor information from the manpower database.',
+    pageDescription: '',
     tableTitle: 'Advisor Directory',
-    tableDescription: 'Browse and search through advisor profiles, contact information, and key dates.'
+    tableDescription: ''
   },
   admin: {
     mode: 'admin' as const,
-    pageTitle: 'Admin: Manpower Management',
-    pageDescription: 'Manage advisor records in the manpower database. Add, edit, or delete advisor information.',
+    pageTitle: 'Manpower',
+    pageDescription: '',
     tableTitle: 'Manpower Management',
-    tableDescription: 'Manage advisor records, update information, and maintain the advisor database.'
+    tableDescription: ''
   }
 } as const;

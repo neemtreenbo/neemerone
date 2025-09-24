@@ -183,7 +183,7 @@ export default function UnifiedManpowerTable({
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active'); // Default to Active
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all'); // Show all by default
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [selectedRecord, setSelectedRecord] = useState<ManpowerRecord | null>(null);
@@ -197,12 +197,11 @@ export default function UnifiedManpowerTable({
 
   // Helper function to determine if status is active or cancelled
   const isActiveStatus = (status?: string): boolean => {
-    return status === 'Active';
+    return status === 'active';
   };
 
   const isCancelledStatus = (status?: string): boolean => {
-    const cancelledStatuses = ['Inactive', 'Terminated', 'Resigned', 'Retired', 'On Leave'];
-    return cancelledStatuses.includes(status || '');
+    return status === 'cancelled';
   };
 
   // Filter data based on search query and status filter
@@ -329,7 +328,7 @@ export default function UnifiedManpowerTable({
 
   const clearFilters = () => {
     setSearchQuery('');
-    setStatusFilter('active'); // Reset to default
+    setStatusFilter('all'); // Reset to default
   };
 
   return (
@@ -390,7 +389,7 @@ export default function UnifiedManpowerTable({
           </Select>
 
           {/* Clear Filters Button */}
-          {(searchQuery || statusFilter !== 'active') && (
+          {(searchQuery || statusFilter !== 'all') && (
             <Button variant="outline" size="sm" onClick={clearFilters}>
               Clear Filters
             </Button>
@@ -402,16 +401,7 @@ export default function UnifiedManpowerTable({
       {data.length > 0 && (
         <div className="flex justify-between items-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {searchQuery || statusFilter !== 'active' ? (
-              <>Showing {filteredData.length} of {data.length} advisor{data.length !== 1 ? 's' : ''}</>
-            ) : (
-              <>Showing {data.length} advisor{data.length !== 1 ? 's' : ''}</>
-            )}
-            {statusFilter !== 'all' && (
-              <span className="ml-1">
-                ({statusFilter === 'active' ? 'Active' : 'Cancelled'} only)
-              </span>
-            )}
+            Showing {data.length} advisor{data.length !== 1 ? 's' : ''}
           </p>
         </div>
       )}
@@ -420,18 +410,13 @@ export default function UnifiedManpowerTable({
       {sortedData.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-8 text-center">
-            {searchQuery || statusFilter !== 'active' ? (
+            {searchQuery ? (
               <>
                 <p className="text-gray-500 dark:text-gray-400 mb-2">
-                  {searchQuery && statusFilter !== 'active'
-                    ? `No advisors found matching "${searchQuery}" with ${statusFilter} status`
-                    : searchQuery
-                    ? `No advisors found matching "${searchQuery}"`
-                    : `No ${statusFilter} advisors found`
-                  }
+                  No advisors found matching "{searchQuery}"
                 </p>
-                <Button variant="outline" onClick={clearFilters}>
-                  Clear filters
+                <Button variant="outline" onClick={clearSearch}>
+                  Clear search
                 </Button>
               </>
             ) : (
@@ -454,29 +439,17 @@ export default function UnifiedManpowerTable({
               <TableRow>
                 <TableHead>Profile</TableHead>
                 <SortableHeader field="advisor_name" currentSort={sortConfig} onSort={handleSort}>
-                  Name
+                  Display Name
                 </SortableHeader>
                 <SortableHeader field="code_number" currentSort={sortConfig} onSort={handleSort}>
                   Code
                 </SortableHeader>
-                {isAdminMode && (
-                  <>
-                    <SortableHeader field="status" currentSort={sortConfig} onSort={handleSort}>
-                      Status
-                    </SortableHeader>
-                    <SortableHeader field="class" currentSort={sortConfig} onSort={handleSort}>
-                      Class
-                    </SortableHeader>
-                  </>
-                )}
                 <SortableHeader field="date_hired" currentSort={sortConfig} onSort={handleSort}>
                   Date Hired
                 </SortableHeader>
-                {!isAdminMode && (
-                  <SortableHeader field="birthday" currentSort={sortConfig} onSort={handleSort}>
-                    Birthday
-                  </SortableHeader>
-                )}
+                <SortableHeader field="birthday" currentSort={sortConfig} onSort={handleSort}>
+                  Birthdate
+                </SortableHeader>
                 {isAdminMode && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -506,24 +479,12 @@ export default function UnifiedManpowerTable({
                   <TableCell className="font-mono text-sm">
                     {record.code_number}
                   </TableCell>
-                  {isAdminMode && (
-                    <>
-                      <TableCell>
-                        <StatusBadge status={record.status} />
-                      </TableCell>
-                      <TableCell>
-                        <ClassBadge advisorClass={record.class} />
-                      </TableCell>
-                    </>
-                  )}
                   <TableCell>
                     {formatDate(record.date_hired)}
                   </TableCell>
-                  {!isAdminMode && (
-                    <TableCell>
-                      {formatDate(record.birthday)}
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    {formatDate(record.birthday)}
+                  </TableCell>
                   {isAdminMode && (
                     <TableCell>
                       <div className="flex space-x-2">
