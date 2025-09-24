@@ -7,7 +7,8 @@ The `ManpowerQuery` component is a comprehensive, reusable solution for displayi
 ## Quick Start
 
 ```tsx
-import { ManpowerQuery, useManpowerQuery } from '@/components/manpower/manpower-query';
+import { ManpowerQuery } from '@/components/manpower/manpower-query';
+import { useManpowerQuery } from '@/hooks/useManpowerQuery';
 
 function MyPage() {
   const { data, isLoading, error } = useManpowerQuery();
@@ -28,11 +29,10 @@ function MyPage() {
 Main component that orchestrates all manpower display functionality.
 
 #### Pre-configured Components
-- `ManpowerFullTable` - Complete table with all features
-- `ManpowerCompactTable` - Essential columns for dashboards
-- `ManpowerStatsCards` - Summary cards only
-- `ManpowerSelector` - Optimized for record selection
-- `ManpowerMinimalTable` - Basic table without extras
+- `ManpowerFullTable` - Complete table with all features (equivalent to `mode: 'full'`)
+- `ManpowerStatsCards` - Summary cards only (equivalent to `mode: 'stats-only'`)
+
+**Note**: For maximum flexibility, use the main `ManpowerQuery` component with different `mode` configurations instead of the pre-configured components.
 
 #### Hook
 - `useManpowerQuery` - Custom hook for data fetching
@@ -50,9 +50,9 @@ Main component that orchestrates all manpower display functionality.
 - ✅ Admin actions (if enabled)
 
 ```tsx
-<ManpowerFullTable data={manpowerData} />
-// or
 <ManpowerQuery data={manpowerData} config={{ mode: 'full' }} />
+// or use the pre-configured component:
+<ManpowerFullTable data={manpowerData} />
 ```
 
 ### 2. Compact Mode (`compact`)
@@ -64,7 +64,7 @@ Main component that orchestrates all manpower display functionality.
 - ✅ Results count
 
 ```tsx
-<ManpowerCompactTable data={manpowerData} />
+<ManpowerQuery data={manpowerData} config={{ mode: 'compact' }} />
 ```
 
 ### 3. Stats-Only Mode (`stats-only`)
@@ -75,6 +75,8 @@ Main component that orchestrates all manpower display functionality.
 - ❌ No search/filter
 
 ```tsx
+<ManpowerQuery data={manpowerData} config={{ mode: 'stats-only' }} />
+// or use the pre-configured component:
 <ManpowerStatsCards data={manpowerData} />
 ```
 
@@ -87,9 +89,12 @@ Main component that orchestrates all manpower display functionality.
 - ✅ Click handlers for selection
 
 ```tsx
-<ManpowerSelector
+<ManpowerQuery
   data={manpowerData}
-  onSelect={(record) => console.log('Selected:', record)}
+  config={{
+    mode: 'selector',
+    onRecordSelect: (record) => console.log('Selected:', record)
+  }}
 />
 ```
 
@@ -101,7 +106,7 @@ Main component that orchestrates all manpower display functionality.
 - ✅ Basic columns only (Name, Code, Status)
 
 ```tsx
-<ManpowerMinimalTable data={manpowerData} />
+<ManpowerQuery data={manpowerData} config={{ mode: 'minimal' }} />
 ```
 
 ## Configuration Options
@@ -181,7 +186,8 @@ const { stats, isLoading, error } = useManpowerStats();
 ```tsx
 'use client';
 
-import { useManpowerQuery, ManpowerStatsCards } from '@/components/manpower/manpower-query';
+import { ManpowerStatsCards } from '@/components/manpower/manpower-query';
+import { useManpowerQuery } from '@/hooks/useManpowerQuery';
 
 export default function Dashboard() {
   const { data, isLoading } = useManpowerQuery();
@@ -203,7 +209,8 @@ export default function Dashboard() {
 ```tsx
 'use client';
 
-import { useManpowerQuery, ManpowerCompactTable } from '@/components/manpower/manpower-query';
+import { ManpowerQuery } from '@/components/manpower/manpower-query';
+import { useManpowerQuery } from '@/hooks/useManpowerQuery';
 
 export default function ProductionPage() {
   const { data, isLoading } = useManpowerQuery();
@@ -214,9 +221,10 @@ export default function ProductionPage() {
 
       {/* Compact table for advisor selection */}
       {data && (
-        <ManpowerCompactTable
+        <ManpowerQuery
           data={data}
           config={{
+            mode: 'compact',
             customTitle: "Select Advisor for Production Report",
             onRecordSelect: (advisor) => {
               // Handle advisor selection for reports
@@ -234,7 +242,8 @@ export default function ProductionPage() {
 ```tsx
 'use client';
 
-import { useManpowerQuery, ManpowerSelector } from '@/components/manpower/manpower-query';
+import { ManpowerQuery } from '@/components/manpower/manpower-query';
+import { useManpowerQuery } from '@/hooks/useManpowerQuery';
 
 export default function BonusPage() {
   const { data } = useManpowerQuery();
@@ -246,9 +255,10 @@ export default function BonusPage() {
 
       {/* Multi-select for bonus eligibility */}
       {data && (
-        <ManpowerSelector
+        <ManpowerQuery
           data={data.filter(advisor => advisor.status === 'active')}
           config={{
+            mode: 'selector',
             customTitle: "Select Advisors for Bonus Calculation",
             onRecordMultiSelect: setSelectedAdvisors,
             visibleColumns: ['profile', 'name', 'code', 'unit_code', 'class']
@@ -267,7 +277,7 @@ export default function BonusPage() {
 'use client';
 
 import { Dialog } from '@/components/ui/dialog';
-import { ManpowerMinimalTable } from '@/components/manpower/manpower-query';
+import { ManpowerQuery } from '@/components/manpower/manpower-query';
 
 function AdvisorSelectModal({ open, onClose, onSelect, data }) {
   return (
@@ -277,9 +287,10 @@ function AdvisorSelectModal({ open, onClose, onSelect, data }) {
           <DialogTitle>Select Advisor</DialogTitle>
         </DialogHeader>
 
-        <ManpowerMinimalTable
+        <ManpowerQuery
           data={data}
           config={{
+            mode: 'minimal',
             onRecordSelect: (advisor) => {
               onSelect(advisor);
               onClose();

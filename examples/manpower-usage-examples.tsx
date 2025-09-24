@@ -12,13 +12,9 @@ import { ManpowerRecord } from '@/lib/types/database';
 import {
   ManpowerQuery,
   ManpowerFullTable,
-  ManpowerCompactTable,
-  ManpowerStatsCards,
-  ManpowerSelector,
-  ManpowerMinimalTable,
-  useManpowerQuery,
-  useManpowerStats
+  ManpowerStatsCards
 } from '@/components/manpower/manpower-query';
+import { useManpowerQuery, useManpowerStats } from '@/hooks/useManpowerQuery';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
@@ -60,7 +56,7 @@ export function DashboardExample() {
 // Example 2: Production Page - Compact Table for Selection
 // =============================================================================
 export function ProductionPageExample() {
-  const { data, isLoading } = useManpowerQuery();
+  const { data } = useManpowerQuery();
   const [selectedAdvisor, setSelectedAdvisor] = useState<ManpowerRecord | null>(null);
 
   return (
@@ -68,12 +64,13 @@ export function ProductionPageExample() {
       <h1 className="text-3xl font-bold">Production Analysis</h1>
 
       {data && (
-        <ManpowerCompactTable
+        <ManpowerQuery
           data={data}
           config={{
+            mode: 'compact',
             customTitle: "Select Advisor for Production Report",
             customDescription: "Choose an advisor to view their production metrics",
-            onRecordSelect: (advisor) => {
+            onRecordSelect: (advisor: ManpowerRecord & { hierarchy_level?: string }) => {
               setSelectedAdvisor(advisor as ManpowerRecord);
               console.log('Selected advisor for production:', advisor);
             }
@@ -101,7 +98,7 @@ export function BonusPageExample() {
   const [selectedAdvisors, setSelectedAdvisors] = useState<ManpowerRecord[]>([]);
 
   // Filter for active advisors only
-  const activeAdvisors = data?.filter(advisor =>
+  const activeAdvisors = data?.filter((advisor: ManpowerRecord & { hierarchy_level?: string }) =>
     advisor.status === 'active' &&
     advisor.class !== 'Individual' // Only managers eligible for certain bonuses
   );
@@ -155,15 +152,16 @@ export function AdvisorSelectModal({ open, onClose, onSelect }: AdvisorSelectMod
         </DialogHeader>
 
         {data && (
-          <ManpowerSelector
+          <ManpowerQuery
             data={data}
-            onSelect={(advisor) => {
-              onSelect(advisor);
-              onClose();
-            }}
             config={{
+              mode: 'selector',
               showSearchFilter: true,
-              visibleColumns: ['profile', 'name', 'code', 'unit_code', 'status']
+              visibleColumns: ['profile', 'name', 'code', 'unit_code', 'status'],
+              onRecordSelect: (advisor) => {
+                onSelect(advisor);
+                onClose();
+              }
             }}
           />
         )}
@@ -208,7 +206,7 @@ export function TeamManagementExample() {
   });
 
   // Filter for direct reports only
-  const directReports = data?.filter(advisor =>
+  const directReports = data?.filter((advisor: ManpowerRecord & { hierarchy_level?: string }) =>
     advisor.hierarchy_level === 'Direct'
   );
 
@@ -248,7 +246,7 @@ export function EmbeddedManpowerWidget() {
   const { data } = useManpowerQuery();
 
   // Show only recent hires
-  const recentHires = data?.filter(advisor => {
+  const recentHires = data?.filter((advisor: ManpowerRecord & { hierarchy_level?: string }) => {
     if (!advisor.date_hired) return false;
     const hireDate = new Date(advisor.date_hired);
     const threeMonthsAgo = new Date();
@@ -261,9 +259,10 @@ export function EmbeddedManpowerWidget() {
       <h3 className="font-semibold mb-4">Recent Hires (Last 3 Months)</h3>
 
       {recentHires && recentHires.length > 0 ? (
-        <ManpowerMinimalTable
+        <ManpowerQuery
           data={recentHires}
           config={{
+            mode: 'minimal',
             visibleColumns: ['name', 'code', 'date_hired'],
             showSearchFilter: false
           }}
@@ -297,9 +296,10 @@ export function LargeDatasetExample() {
       <h1>Large Dataset View ({data?.length} total records)</h1>
 
       {paginatedData && (
-        <ManpowerCompactTable
+        <ManpowerQuery
           data={paginatedData}
           config={{
+            mode: 'compact',
             customDescription: `Showing ${paginatedData.length} of ${data?.length} records`,
             showResultsCount: true
           }}
