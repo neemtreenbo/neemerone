@@ -6,11 +6,22 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  // With Fluid compute, don't put this client in a global environment
-  // variable. Always create a new one on each request.
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY!,
+  try {
+    // Validate environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables in middleware');
+      // Return original response if env vars are missing
+      return supabaseResponse;
+    }
+
+    // With Fluid compute, don't put this client in a global environment
+    // variable. Always create a new one on each request.
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -33,10 +44,19 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  // IMPORTANT: If you remove getClaims() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims()
-  const user = data?.claims
+    // IMPORTANT: If you remove getClaims() and you use server-side rendering
+    // with the Supabase client, your users may be randomly logged out.
+    const { data, error: authError } = await supabase.auth.getClaims()
+
+    if (authError) {
+      console.error('Middleware auth error:', authError);
+      // If auth fails, redirect to login
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      return NextResponse.redirect(url)
+    }
+
+    const user = data?.claims
 
   // Public routes that don't require authentication
   const publicRoutes = ['/auth', '/login']
@@ -65,7 +85,8 @@ export async function updateSession(request: NextRequest) {
         url.pathname = '/onboarding'
         return NextResponse.redirect(url)
       }
-    } catch {
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
       // If we can't check onboarding status, redirect to onboarding to be safe
       const url = request.nextUrl.clone()
       url.pathname = '/onboarding'
@@ -106,5 +127,13 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse
+    return supabaseResponse;
+  } catch (error) {
+    console.error('Critical middleware error:', error);
+
+    // In case of critical error, redirect to error page
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/error'
+    return NextResponse.redirect(url)
+  }
 }

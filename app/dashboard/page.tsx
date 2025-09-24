@@ -1,14 +1,23 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
-export default async function Dashboard() {
-  const supabase = await createClient();
+// This page requires authentication, so it cannot be statically generated
+export const dynamic = 'force-dynamic';
 
-  // Check if user is authenticated
-  const { data: user, error } = await supabase.auth.getClaims();
-  if (error || !user?.claims) {
-    redirect('/auth/login');
-  }
+export default async function Dashboard() {
+  try {
+    const supabase = await createClient();
+
+    // Check if user is authenticated
+    const { data: user, error } = await supabase.auth.getClaims();
+    if (error) {
+      console.error('Dashboard auth error:', error);
+      redirect('/auth/error');
+    }
+
+    if (!user?.claims) {
+      redirect('/auth/login');
+    }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -28,4 +37,9 @@ export default async function Dashboard() {
       </div>
     </div>
   );
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    // This will be caught by the error boundary
+    throw new Error('Failed to load dashboard');
+  }
 }

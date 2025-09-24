@@ -1,25 +1,21 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { checkAdminAccess } from '@/lib/auth';
 import { ManpowerRecord } from '@/lib/types/database';
-import ManpowerTable from '@/components/manpower-table';
+import AdminManpowerTable from '@/components/admin/manpower-table';
 
-// This page requires authentication and database queries, so it cannot be statically generated
+// This page requires admin authentication and database queries, so it cannot be statically generated
 export const dynamic = 'force-dynamic';
 
-export default async function Manpower() {
+export default async function AdminManpower() {
   try {
-    const supabase = await createClient();
-
-    // Check if user is authenticated
-    const { data: user, error: authError } = await supabase.auth.getClaims();
-    if (authError) {
-      console.error('Manpower auth error:', authError);
-      redirect('/auth/error');
-    }
-
-    if (!user?.claims) {
+    // Check admin access
+    const { isAdmin } = await checkAdminAccess();
+    if (!isAdmin) {
       redirect('/auth/login');
     }
+
+    const supabase = await createClient();
 
   // Fetch manpower data
   const { data: manpowerData, error: dataError } = await supabase
@@ -33,7 +29,13 @@ export default async function Manpower() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="container mx-auto p-6">
-          <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Manpower</h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin: Manpower Management</h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              Manage advisor records in the manpower database
+            </p>
+          </div>
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="text-center text-red-600 dark:text-red-400">
               <p>Error loading manpower data. Please try again later.</p>
@@ -53,26 +55,26 @@ export default async function Manpower() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manpower</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin: Manpower Management</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">
-            View and manage advisor information from the manpower database.
+            Manage advisor records in the manpower database. Add, edit, or delete advisor information.
           </p>
         </div>
 
         {manpower.length > 0 && (
           <div className="mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {manpower.length} advisor{manpower.length !== 1 ? 's' : ''}
+              Managing {manpower.length} advisor record{manpower.length !== 1 ? 's' : ''}
             </p>
           </div>
         )}
 
-        <ManpowerTable data={manpower} />
+        <AdminManpowerTable data={manpower} />
       </div>
     </div>
   );
   } catch (error) {
-    console.error('Manpower page error:', error);
-    throw new Error('Failed to load manpower data');
+    console.error('Admin manpower page error:', error);
+    throw new Error('Failed to load admin manpower page');
   }
 }

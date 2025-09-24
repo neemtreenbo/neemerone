@@ -14,7 +14,9 @@ import {
   Calendar,
   Settings,
   LogOut,
-  User
+  User,
+  Shield,
+  UserCog
 } from 'lucide-react';
 import { UserAvatar, useUser } from '@/components/user-avatar';
 import { NavMenuItemComponent, NavMenuItem } from '@/components/nav-menu-item';
@@ -126,6 +128,24 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
     },
   ];
 
+  // Admin-specific navigation items
+  const adminItems: NavMenuItem[] = profile?.app_role === 'admin' ? [
+    {
+      label: 'Admin Panel',
+      icon: Shield,
+      children: [
+        {
+          label: 'Manpower Management',
+          href: '/admin/manpower',
+          icon: UserCog,
+        },
+      ],
+    },
+  ] : [];
+
+  // Combine navigation items
+  const allNavigationItems = [...navigationItems, ...adminItems];
+
   const handleLogout = async () => {
     try {
       const supabase = createClient();
@@ -199,7 +219,7 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
             Navigation
           </DropdownMenuLabel>
 
-          {navigationItems.map((item, index) => (
+          {allNavigationItems.map((item, index) => (
             <NavMenuItemComponent
               key={`${item.label}-${index}`}
               item={item}
