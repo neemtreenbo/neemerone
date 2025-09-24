@@ -115,7 +115,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
 
       // Update database record to remove photo_url
       const updateResult = await updateManpowerRecord(record.code_number, {
-        photo_url: null
+        photo_url: undefined
       });
 
       if (!updateResult.success) {

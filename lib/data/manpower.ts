@@ -10,7 +10,7 @@ export interface ManpowerDataResult {
 
 /**
  * Fetch manpower data from Supabase
- * Shared utility for both regular and admin manpower pages
+ * RLS policies automatically filter records based on user hierarchy
  */
 export async function fetchManpowerData(): Promise<ManpowerDataResult> {
   try {
