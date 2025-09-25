@@ -3,11 +3,15 @@ import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserProfile } from '@/lib/auth';
 
 interface FYCommissionData {
-  advisor_code: string;
-  advisor_name?: string;
+  code: string;
   process_date?: string;
-  fy_commission?: number;
-  commission_rate?: number;
+  insured_name?: string;
+  policy_number?: string;
+  transaction_type?: string;
+  fy_premium_php?: number;
+  due_date?: string;
+  rate?: number;
+  fy_commission_php?: number;
 }
 
 export async function POST(request: Request) {
@@ -89,7 +93,7 @@ export async function POST(request: Request) {
     const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
       p_table_name: 'fy_commission_details',
       p_records: fyCommissionData,
-      p_duplicate_fields: ['advisor_code', 'process_date']
+      p_duplicate_fields: ['code', 'process_date']
     });
 
     console.log('RPC call completed:', {
