@@ -53,9 +53,10 @@ Claude should actively warn about:
 - Proper error handling with typed exceptions
 
 ### Supabase Integration (Critical)
-- **ALWAYS use MCP (Model Context Protocol) for Supabase**
-- Consult Supabase schema before making changes
-- Sync all database operations through MCP
+- **ALWAYS use Supabase CLI for database operations**
+- Consult Supabase schema before making changes using `npx supabase db diff`
+- Use `npx supabase db push` for schema changes
+- Use `npx supabase migration` for database migrations
 - Validate data integrity before mutations
 - Use proper RLS (Row Level Security) policies
 - Implement proper error handling for database operations
@@ -112,7 +113,7 @@ Before implementing features, Claude should understand:
 ## Required Checks Before Implementation
 
 ### Pre-Development Checklist
-1. **Supabase Schema Review**: Check current schema via MCP
+1. **Supabase Schema Review**: Check current schema via `npx supabase db diff`
 2. **Business Logic Validation**: Confirm understanding of Neem Tree workflows and Sun Life processes
 3. **Performance Impact**: Assess potential performance implications
 4. **Security Review**: Identify potential security risks
@@ -129,7 +130,7 @@ Before implementing features, Claude should understand:
 
 ### Required Questions from Claude
 - "Before proceeding, let me verify the advisor performance calculation logic..."
-- "Should I check the current Supabase schema to ensure compatibility with Neem Tree data structure?"
+- "Should I check the current Supabase schema using `npx supabase db diff` to ensure compatibility with Neem Tree data structure?"
 - "This change might affect the advisor performance dashboard. Should we discuss the impact on your team management?"
 - "I'm not entirely certain about the Sun Life commission calculation for Manager Candidates. Can you clarify?"
 
@@ -165,8 +166,9 @@ Before implementing features, Claude should understand:
 
 ## Quick Reference Commands
 
+### Normal Development
 ```bash
-# Start development with proper environment
+# Start development server (use this 99% of the time)
 npm run dev
 
 # Type checking
@@ -175,16 +177,67 @@ npm run type-check
 # Build for production
 npm run build
 
-# Database operations (via MCP)
-# Always consult Supabase schema first
+# ESLint checking
+npm run lint
+```
 
-# Performance analysis
-npm run analyze
+### Troubleshooting Commands (when cache issues occur)
+```bash
+# Health check - diagnose environment issues
+npm run health
+
+# Light cleanup - restart with .next cache clear
+npm run clean:dev
+
+# Full cleanup - clear all caches and restart
+npm run dev:fresh
+
+# Emergency cleanup - kill processes and clear all caches
+npm run cleanup
+
+# Check for conflicting processes
+npm run check-processes
+
+# Manual process restart (if needed)
+npm run restart
+```
+
+### Cache Management Strategy
+- **Normal Development**: Just use `npm run dev` - hot reload should work
+- **Minor Issues**: Try `npm run clean:dev` (clears .next only)
+- **Major Issues**: Use `npm run dev:fresh` (full cache clear)
+- **Corruption**: Use `npm run cleanup` (process kill + full cleanup)
+
+### Database Operations
+```bash
+# Check current schema and differences
+npx supabase db diff
+
+# Generate new migration
+npx supabase migration new [migration_name]
+
+# Apply migrations
+npx supabase db push
+
+# Reset local database (development only)
+npx supabase db reset
+
+# Start local Supabase (for development)
+npx supabase start
+
+# Stop local Supabase
+npx supabase stop
+
+# Link to remote project
+npx supabase link --project-ref [your-project-ref]
+
+# Pull remote schema changes
+npx supabase db pull
 ```
 
 ## Remember
 - **Ask when uncertain (90% rule)**
-- **Always consult Supabase via MCP**
+- **Always use Supabase CLI for database operations**
 - **Warn about architectural issues**
 - **Focus on solid, leak-free architecture**
 - **Consider Neem Tree's specific advisor hierarchy**

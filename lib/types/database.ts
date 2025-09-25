@@ -73,6 +73,67 @@ export interface StaffAdvisorAssignment {
 }
 
 // =============================================================================
+// COMMISSION AND SALES TRACKING TABLES
+// =============================================================================
+
+export interface FYCommissionDetails {
+  id: string; // UUID
+  code?: string; // References manpower.code_number
+  process_date?: string; // ISO date string
+  insured_name?: string;
+  policy_number?: string;
+  transaction_type?: string;
+  fy_premium_php?: number; // First Year Premium in PHP
+  due_date?: string; // ISO date string
+  rate?: number; // Commission rate (0-1)
+  fy_commission_php?: number; // First Year Commission in PHP
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+export interface RNCommissionDetails {
+  id: string; // UUID
+  code?: string; // References manpower.code_number
+  process_date?: string; // ISO date string
+  insured_name?: string;
+  policy_number?: string;
+  transaction_type?: string;
+  rn_premium_php?: number; // Renewal Premium in PHP
+  due_date?: string; // ISO date string
+  rate?: number; // Commission rate (0-1)
+  year?: number; // Commission year
+  rn_commission_php?: number; // Renewal Commission in PHP
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+export interface SubmittedAppsDetails {
+  id: string; // UUID
+  advisor_code?: string; // References manpower.code_number
+  advisor_name?: string;
+  process_date?: string; // ISO date string
+  insured_name?: string;
+  policy_number?: string;
+  submitted_apps?: number; // Number of submitted applications
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+export interface SettledAppsDetails {
+  id: string; // UUID
+  advisor_code?: string; // References manpower.code_number
+  advisor_name?: string;
+  process_date?: string; // ISO date string
+  insured_name?: string;
+  policy_number?: string;
+  settled_apps?: number; // Number of settled applications
+  agency_credits?: number; // Credits earned by the agency
+  net_sales_credits?: number; // Net sales credits after deductions
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+// =============================================================================
 // HIERARCHY TYPES
 // =============================================================================
 
