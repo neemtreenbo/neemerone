@@ -7,8 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileSpreadsheet, AlertCircle, CheckCircle, Trash2, Copy, Plus, RotateCcw, TrendingUp } from 'lucide-react';
+import { FileSpreadsheet, AlertCircle, CheckCircle, Trash2, Copy, Plus, RotateCcw, TrendingUp, AlertTriangle } from 'lucide-react';
 import { DataPreviewTable } from '../data-preview-table';
+import { detectDataSchema, isSchemaCompatible, getCorrectUploadSuggestion } from '@/lib/upload-schema-detector';
 
 interface ParsedSubmittedApp {
   advisor_code?: string;
@@ -42,6 +43,7 @@ export function SubmittedAppsUpload() {
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [schemaWarning, setSchemaWarning] = useState<string | null>(null);
 
   const expectedColumns = [
     { key: 'advisor_code', label: 'Advisor Code', required: true },
@@ -95,6 +97,7 @@ export function SubmittedAppsUpload() {
       setParsedData([]);
       setIsValidData(false);
       setParseErrors([]);
+      setSchemaWarning(null);
       return;
     }
 
@@ -103,6 +106,7 @@ export function SubmittedAppsUpload() {
       setParseErrors(['Data must include at least headers and one data row']);
       setParsedData([]);
       setIsValidData(false);
+      setSchemaWarning(null);
       return;
     }
 
@@ -110,6 +114,16 @@ export function SubmittedAppsUpload() {
     const dataRows = lines.slice(1);
     const errors: string[] = [];
     const parsed: ParsedSubmittedApp[] = [];
+
+    // Detect data schema to prevent wrong table uploads
+    const schemaDetection = detectDataSchema(headers);
+    const compatibility = isSchemaCompatible(schemaDetection.detectedSchema, 'submitted_apps', schemaDetection.confidence);
+
+    if (!compatibility.compatible && compatibility.warning) {
+      setSchemaWarning(compatibility.warning + ' ' + getCorrectUploadSuggestion(schemaDetection.detectedSchema));
+    } else {
+      setSchemaWarning(null);
+    }
 
     // Map headers to expected columns (exact mapping for the Excel format)
     const columnMapping: Record<string, number> = {};
@@ -205,7 +219,10 @@ export function SubmittedAppsUpload() {
 
     setParsedData(parsed);
     setParseErrors(errors);
-    setIsValidData(errors.length === 0 && parsed.length > 0);
+
+    // Block upload if schema is incompatible
+    const hasSchemaIssue = !compatibility.compatible && compatibility.warning;
+    setIsValidData(errors.length === 0 && parsed.length > 0 && !hasSchemaIssue);
   };
 
   const handlePaste = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -222,6 +239,7 @@ export function SubmittedAppsUpload() {
     setUploadResult(null);
     setUploadError(null);
     setShowSuccessDialog(false);
+    setSchemaWarning(null);
   };
 
   const copyStatsToClipboard = async () => {
@@ -375,6 +393,26 @@ export function SubmittedAppsUpload() {
                   <li>... and {parseErrors.length - 5} more errors</li>
                 )}
               </ul>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Schema Error - Blocks Upload */}
+      {schemaWarning && (
+        <Alert variant="destructive" className="border-red-600 bg-red-50 dark:bg-red-950/50">
+          <AlertTriangle className="h-5 w-5 text-red-600" />
+          <AlertDescription>
+            <div className="space-y-3">
+              <div className="font-bold text-red-800 dark:text-red-200 text-lg">
+                🚫 UPLOAD BLOCKED - Wrong Data Type
+              </div>
+              <div className="font-medium text-red-700 dark:text-red-300">
+                {schemaWarning}
+              </div>
+              <div className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-300 dark:border-red-700">
+                <strong>Upload is disabled</strong> to prevent data corruption. Please use the correct upload page for your data type.
+              </div>
             </div>
           </AlertDescription>
         </Alert>
