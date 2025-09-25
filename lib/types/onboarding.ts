@@ -1,3 +1,5 @@
+import { AppRole } from './database';
+
 export interface OnboardingFormData {
   firstName: string;
   lastName: string;
@@ -15,7 +17,7 @@ export interface ProfileData {
   first_name?: string;
   last_name?: string;
   email?: string;
-  app_role?: string;
+  app_role?: AppRole;
   photo_url?: string;
   onboarding_completed: boolean;
   created_at: string;

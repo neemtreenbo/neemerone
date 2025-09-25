@@ -16,7 +16,8 @@ import {
   LogOut,
   User
 } from 'lucide-react';
-import { UserAvatar, useUser } from '@/components/user-avatar';
+import { UserAvatar } from '@/components/user-avatar';
+import { useUser } from '@/lib/contexts/user-context';
 import { NavMenuItemComponent, NavMenuItem } from '@/components/nav-menu-item';
 import {
   DropdownMenu,

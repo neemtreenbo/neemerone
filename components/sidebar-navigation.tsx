@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/sidebar-context';
-import { useUser } from '@/components/user-avatar';
+import { useUser } from '@/lib/contexts/user-context';
 
 export interface SidebarNavItem {
   label: string;
@@ -40,106 +40,110 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { profile } = useUser();
 
-  // Navigation menu structure
-  const navigationItems: SidebarNavItem[] = [
-    {
-      label: 'Dashboard',
-      href: '/dashboard',
-      icon: BarChart3,
-    },
-    {
-      label: 'Manpower',
-      href: '/manpower',
-      icon: Users,
-    },
-    {
-      label: 'New Business',
-      icon: FileText,
-      children: [
-        {
-          label: 'Application Registry',
-          href: '/application-registry',
-        },
-        {
-          label: 'Policy Registry',
-          href: '/policy-registry',
-        },
-      ],
-    },
-    {
-      label: 'Production',
-      icon: TrendingUp,
-      children: [
-        {
-          label: 'Annual Production',
-          href: '/production/annual-production',
-        },
-        {
-          label: 'Contest Month',
-          href: '/production/contest-month',
-        },
-        {
-          label: 'Monthly Production',
-          href: '/production/monthly-production',
-        },
-      ],
-    },
-    {
-      label: 'Bonus',
-      icon: Award,
-      children: [
-        {
-          label: 'Plan B',
-          href: '/bonus/plan-b',
-        },
-        {
-          label: 'Eamb',
-          href: '/bonus/eamb',
-        },
-        {
-          label: 'QGB',
-          href: '/bonus/qgb',
-        },
-        {
-          label: 'Override',
-          href: '/bonus/override',
-        },
-      ],
-    },
-    {
-      label: 'Learning',
-      icon: GraduationCap,
-      children: [
-        {
-          label: 'Videos',
-          href: '/learning/videos',
-        },
-        {
-          label: 'Repository',
-          href: '/learning/repository',
-        },
-      ],
-    },
-    {
-      label: 'Pipeline',
-      href: '/pipeline',
-      icon: GitBranch,
-    },
-    {
-      label: 'Calendar',
-      href: '/calendar',
-      icon: Calendar,
-    },
-  ];
+  // Navigation menu structure - memoized to prevent unnecessary re-renders
+  const navigationItems: SidebarNavItem[] = useMemo(() => {
+    const baseItems: SidebarNavItem[] = [
+      {
+        label: 'Dashboard',
+        href: '/dashboard',
+        icon: BarChart3,
+      },
+      {
+        label: 'Manpower',
+        href: '/manpower',
+        icon: Users,
+      },
+      {
+        label: 'New Business',
+        icon: FileText,
+        children: [
+          {
+            label: 'Application Registry',
+            href: '/application-registry',
+          },
+          {
+            label: 'Policy Registry',
+            href: '/policy-registry',
+          },
+        ],
+      },
+      {
+        label: 'Production',
+        icon: TrendingUp,
+        children: [
+          {
+            label: 'Annual Production',
+            href: '/production/annual-production',
+          },
+          {
+            label: 'Contest Month',
+            href: '/production/contest-month',
+          },
+          {
+            label: 'Monthly Production',
+            href: '/production/monthly-production',
+          },
+        ],
+      },
+      {
+        label: 'Bonus',
+        icon: Award,
+        children: [
+          {
+            label: 'Plan B',
+            href: '/bonus/plan-b',
+          },
+          {
+            label: 'Eamb',
+            href: '/bonus/eamb',
+          },
+          {
+            label: 'QGB',
+            href: '/bonus/qgb',
+          },
+          {
+            label: 'Override',
+            href: '/bonus/override',
+          },
+        ],
+      },
+      {
+        label: 'Learning',
+        icon: GraduationCap,
+        children: [
+          {
+            label: 'Videos',
+            href: '/learning/videos',
+          },
+          {
+            label: 'Repository',
+            href: '/learning/repository',
+          },
+        ],
+      },
+      {
+        label: 'Pipeline',
+        href: '/pipeline',
+        icon: GitBranch,
+      },
+      {
+        label: 'Calendar',
+        href: '/calendar',
+        icon: Calendar,
+      },
+    ];
 
-  // Add admin-only items conditionally
-  if (profile?.app_role === 'admin') {
-    navigationItems.push({
-      label: 'Upload',
-      href: '/upload',
-      icon: Upload,
-    });
-  }
+    // Add admin-only items conditionally
+    if (profile?.app_role === 'admin') {
+      baseItems.push({
+        label: 'Upload',
+        href: '/upload',
+        icon: Upload,
+      });
+    }
+
+    return baseItems;
+  }, [profile?.app_role]); // Only recalculate when role changes
 
   const toggleExpanded = (itemLabel: string) => {
     setExpandedItems(prev =>
@@ -154,7 +158,7 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
   const isChildActive = (children?: Omit<SidebarNavItem, 'icon'>[]) =>
     children?.some(child => child.href && pathname === child.href) || false;
 
-  const NavItem = ({ item }: { item: SidebarNavItem }) => {
+  const NavItem = memo(function NavItem({ item }: { item: SidebarNavItem }) {
     const hasChildren = item.children && item.children.length > 0;
     const expanded = isExpanded(item.label);
     const active = isActive(item.href);
@@ -238,7 +242,7 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
         )}
       </Link>
     );
-  };
+  });
 
   return (
     <>
@@ -267,13 +271,13 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
               <div className="h-8 w-auto flex-shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://ekfwqainoexczvpuzlgr.supabase.co/storage/v1/object/public/Website/Logo/2023_NEEMNBO_LOGO_WEB_COLOUR.png"
+                  src={process.env.NEXT_PUBLIC_LOGO_LIGHT_URL}
                   alt="Neem Tree Logo"
                   className="h-8 w-auto dark:hidden"
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://ekfwqainoexczvpuzlgr.supabase.co/storage/v1/object/public/Website/Logo/2023_NEEMNBO_LOGO_WEB_WHITE.png"
+                  src={process.env.NEXT_PUBLIC_LOGO_DARK_URL}
                   alt="Neem Tree Logo"
                   className="h-8 w-auto hidden dark:block"
                 />
@@ -292,13 +296,13 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
               <div className="h-8 w-auto">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://ekfwqainoexczvpuzlgr.supabase.co/storage/v1/object/public/Website/Logo/2023_NEEMNBO_LOGO_WEB_COLOUR.png"
+                  src={process.env.NEXT_PUBLIC_LOGO_LIGHT_URL}
                   alt="Neem Tree Logo"
                   className="h-8 w-auto dark:hidden"
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="https://ekfwqainoexczvpuzlgr.supabase.co/storage/v1/object/public/Website/Logo/2023_NEEMNBO_LOGO_WEB_WHITE.png"
+                  src={process.env.NEXT_PUBLIC_LOGO_DARK_URL}
                   alt="Neem Tree Logo"
                   className="h-8 w-auto hidden dark:block"
                 />

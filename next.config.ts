@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   },
   // Development optimizations
   ...(process.env.NODE_ENV === 'development' && {
-    webpack: (config: any) => {
+    webpack: (config: any, { dev, isServer }: { dev: boolean; isServer: boolean }) => {
       // Better cache management for development
       config.cache = {
         type: 'filesystem',

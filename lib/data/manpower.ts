@@ -53,9 +53,34 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
     // For performance, batch get all subordinates once instead of per record
     let allSubordinates: { subordinate_code: string; level_depth: number }[] = [];
     if (userManpowerCode && manpowerData && manpowerData.length > 0) {
-      const { data: subordinatesData } = await supabase
-        .rpc('get_all_subordinates', { manager_code: userManpowerCode });
-      allSubordinates = subordinatesData || [];
+      try {
+        // Add timeout protection for RPC call
+        const rpcPromise = supabase
+          .rpc('get_all_subordinates', { manager_code: userManpowerCode });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('RPC call timeout after 10 seconds')), 10000);
+        });
+
+        const result = await Promise.race([
+          rpcPromise,
+          timeoutPromise
+        ]) as { data: { subordinate_code: string; level_depth: number }[] | null; error: any };
+
+        const { data: subordinatesData, error: rpcError } = result;
+
+        if (rpcError) {
+          console.error('RPC function get_all_subordinates failed:', rpcError);
+          // Continue with empty subordinates array rather than failing completely
+          // This allows the manpower data to still be displayed even if hierarchy is not calculated
+          console.warn('Continuing without hierarchy levels due to RPC error');
+        } else {
+          allSubordinates = subordinatesData || [];
+        }
+      } catch (timeoutError) {
+        console.error('RPC call timed out or failed:', timeoutError);
+        console.warn('Continuing without hierarchy levels due to timeout');
+      }
     }
 
     // Add hierarchy levels and team names to each record efficiently

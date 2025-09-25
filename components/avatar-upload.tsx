@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,35 @@ export function AvatarUpload({ onFileSelect, className }: AvatarUploadProps) {
 
   const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const readerRef = useRef<FileReader | null>(null);
+
+  // Cleanup function for blob URLs and canvas
+  useEffect(() => {
+    return () => {
+      // Clean up preview URL when component unmounts
+      if (uploadState.previewUrl) {
+        URL.revokeObjectURL(uploadState.previewUrl);
+      }
+
+      // Clean up image src if it's a blob URL
+      if (imageSrc && imageSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(imageSrc);
+      }
+
+      // Clear canvas context
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+      }
+
+      // Abort file reader if still reading
+      if (readerRef.current) {
+        readerRef.current.abort();
+      }
+    };
+  }, [uploadState.previewUrl, imageSrc]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -61,13 +90,36 @@ export function AvatarUpload({ onFileSelect, className }: AvatarUploadProps) {
         return;
       }
 
+      // Clean up previous blob URLs
+      if (imageSrc && imageSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(imageSrc);
+      }
+
       const reader = new FileReader();
+      readerRef.current = reader;
+
       reader.onload = () => {
-        setImageSrc(reader.result as string);
-        setSelectedFile(file);
-        setIsEditing(true);
-        setUploadState(prev => ({ ...prev, error: null }));
+        if (reader.result) {
+          setImageSrc(reader.result as string);
+          setSelectedFile(file);
+          setIsEditing(true);
+          setUploadState(prev => ({ ...prev, error: null }));
+        }
+        readerRef.current = null;
       };
+
+      reader.onerror = () => {
+        setUploadState(prev => ({
+          ...prev,
+          error: 'Error reading file'
+        }));
+        readerRef.current = null;
+      };
+
+      reader.onabort = () => {
+        readerRef.current = null;
+      };
+
       reader.readAsDataURL(file);
     }
   }, []);
@@ -138,6 +190,11 @@ export function AvatarUpload({ onFileSelect, className }: AvatarUploadProps) {
   const handleConfirmCrop = async () => {
     const croppedFile = await getCroppedImg();
     if (croppedFile) {
+      // Clean up previous preview URL
+      if (uploadState.previewUrl) {
+        URL.revokeObjectURL(uploadState.previewUrl);
+      }
+
       onFileSelect(croppedFile);
       setUploadState(prev => ({
         ...prev,
@@ -148,6 +205,11 @@ export function AvatarUpload({ onFileSelect, className }: AvatarUploadProps) {
   };
 
   const handleCancelCrop = () => {
+    // Clean up image src if it's a blob URL
+    if (imageSrc && imageSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(imageSrc);
+    }
+
     setIsEditing(false);
     setImageSrc('');
     setSelectedFile(null);
@@ -156,6 +218,14 @@ export function AvatarUpload({ onFileSelect, className }: AvatarUploadProps) {
   };
 
   const handleRemoveImage = () => {
+    // Clean up all blob URLs
+    if (imageSrc && imageSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(imageSrc);
+    }
+    if (uploadState.previewUrl) {
+      URL.revokeObjectURL(uploadState.previewUrl);
+    }
+
     setImageSrc('');
     setSelectedFile(null);
     setIsEditing(false);

@@ -1,9 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { User } from '@supabase/supabase-js';
-import { ProfileData } from '@/lib/types/onboarding';
+import { useUser } from '@/lib/contexts/user-context';
 
 interface UserAvatarProps {
   size?: 'sm' | 'md' | 'lg';
@@ -16,9 +13,7 @@ export function UserAvatar({
   showOnlineIndicator = false,
   className = ''
 }: UserAvatarProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, profile, isLoading } = useUser();
 
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -31,53 +26,6 @@ export function UserAvatar({
     md: 'w-2.5 h-2.5 bottom-0 right-0',
     lg: 'w-3 h-3 bottom-0.5 right-0.5'
   };
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const supabase = createClient();
-
-      try {
-        // Get current user
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-        if (currentUser) {
-          setUser(currentUser);
-
-          // Get profile data
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .single();
-
-          if (!error && profileData) {
-            setProfile(profileData);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-
-    // Listen for auth state changes
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   // Loading state
   if (isLoading) {
@@ -157,57 +105,4 @@ export function UserAvatar({
       </div>
     </div>
   );
-}
-
-// Hook to get user data for other components
-export function useUser() {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const supabase = createClient();
-
-      try {
-        const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-        if (currentUser) {
-          setUser(currentUser);
-
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .single();
-
-          if (!error && profileData) {
-            setProfile(profileData);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-
-    const supabase = createClient();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  return { user, profile, isLoading };
 }

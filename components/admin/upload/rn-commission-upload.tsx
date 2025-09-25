@@ -362,9 +362,9 @@ export function RNCommissionUpload() {
             clearData();
           }, 3000); // Clear after 3 seconds to show success message
         }
-      } catch (fetchError) {
+      } catch (fetchError: unknown) {
         clearTimeout(timeoutId);
-        if (fetchError.name === 'AbortError') {
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
           throw new Error('Upload timed out after 60 seconds. Please try with smaller batches.');
         }
         throw fetchError;
