@@ -72,12 +72,25 @@ export function RNCommissionUpload() {
   };
 
   // Helper function to parse currency string (removes commas and converts to number)
+  // Handles negative values in parentheses format: (1.0) = -1.0
   const parseCurrencyString = (currencyStr: string): number | null => {
     try {
-      // Remove commas and any currency symbols, then parse as float
-      const cleanStr = currencyStr.replace(/[,\$₱]/g, '').trim();
+      let cleanStr = currencyStr.trim();
+      let isNegative = false;
+
+      // Check for parentheses notation (negative values)
+      if (cleanStr.startsWith('(') && cleanStr.endsWith(')')) {
+        isNegative = true;
+        cleanStr = cleanStr.slice(1, -1).trim(); // Remove parentheses
+      }
+
+      // Remove commas and any currency symbols
+      cleanStr = cleanStr.replace(/[,\$₱]/g, '').trim();
+
       const num = parseFloat(cleanStr);
-      return isNaN(num) ? null : num;
+      if (isNaN(num)) return null;
+
+      return isNegative ? -num : num;
     } catch {
       return null;
     }
@@ -261,13 +274,13 @@ export function RNCommissionUpload() {
         }
       }
 
-      // Parse rn_commission_php (currency format)
+      // Parse rn_commission_php (currency format, supports negative values in parentheses)
       if (columnMapping.rn_commission_php !== undefined) {
         const value = cells[columnMapping.rn_commission_php]?.trim();
         if (value) {
           const numValue = parseCurrencyString(value);
-          if (numValue === null || numValue < 0) {
-            rowErrors.push('RN Commission (PHP) must be a positive number (currency format accepted)');
+          if (numValue === null) {
+            rowErrors.push('RN Commission (PHP) must be a valid number (currency format accepted, negatives in parentheses)');
           } else {
             item.rn_commission_php = numValue;
           }
