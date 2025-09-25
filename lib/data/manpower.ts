@@ -81,7 +81,8 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
       const teamName = record.teams?.unit_name || null;
 
       // Remove the teams object from the record to keep it clean
-      const { teams: _teams, ...cleanRecord } = record;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { teams, ...cleanRecord } = record;
 
       return {
         ...cleanRecord,

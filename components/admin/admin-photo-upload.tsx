@@ -173,7 +173,7 @@ export function AdminPhotoUpload({ onFileSelect, onPhotoRemove, initialPhotoUrl,
       try {
         setUploadState(prev => ({ ...prev, isUploading: true }));
         await onPhotoRemove(initialPhotoUrl);
-      } catch (error) {
+      } catch {
         setUploadState(prev => ({
           ...prev,
           error: 'Failed to remove photo',

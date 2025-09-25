@@ -234,12 +234,12 @@ export function ManpowerQuery({
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Data Table - Pass filtered data instead of raw data */}
       <ManpowerDataTable
-        data={data}
+        data={filteredData}
         mode={finalConfig.allowAdminActions ? 'admin' : 'regular'}
-        searchQuery={searchQuery}
-        statusFilter={statusFilter}
+        searchQuery=""
+        statusFilter="all"
       />
     </div>
   );

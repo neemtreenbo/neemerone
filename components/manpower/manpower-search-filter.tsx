@@ -14,8 +14,6 @@ import {
   ClassCategory,
   MonthFilter,
   MONTHS,
-  getClassCategoryName,
-  getMonthName,
 } from '@/lib/utils/manpower-filters';
 
 type StatusFilter = 'active' | 'cancelled' | 'all';
@@ -113,23 +111,23 @@ export function ManpowerSearchFilter({
 
         {/* Class Filter */}
         <Select value={classFilter} onValueChange={onClassFilterChange}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[100px]">
             <SelectValue placeholder="Class" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Classes</SelectItem>
-            <SelectItem value="advisors">Advisors (A-E)</SelectItem>
-            <SelectItem value="managers">Managers (NBM, SM, UM, MC)</SelectItem>
+            <SelectItem value="advisors">Advisor</SelectItem>
+            <SelectItem value="managers">Manager</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Date Hired Month Filter */}
         <Select value={dateHiredMonthFilter} onValueChange={onDateHiredMonthFilterChange}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Hired Month" />
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Sunniversary" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Months</SelectItem>
+            <SelectItem value="all">Sunniversary</SelectItem>
             {MONTHS.map(month => (
               <SelectItem key={month.value} value={month.value}>
                 {month.label}
@@ -140,11 +138,11 @@ export function ManpowerSearchFilter({
 
         {/* Birthday Month Filter */}
         <Select value={birthdayMonthFilter} onValueChange={onBirthdayMonthFilterChange}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Birthday Month" />
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="Birthday" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Months</SelectItem>
+            <SelectItem value="all">Birthday</SelectItem>
             {MONTHS.map(month => (
               <SelectItem key={month.value} value={month.value}>
                 {month.label}
