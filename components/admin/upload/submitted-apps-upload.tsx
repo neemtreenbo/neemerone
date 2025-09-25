@@ -63,6 +63,31 @@ export function SubmittedAppsUpload() {
     }
   };
 
+  // Helper function to parse numeric values (handles negative values in parentheses)
+  // Handles negative values in parentheses format: (1.0) = -1.0
+  const parseCurrencyString = (currencyStr: string): number | null => {
+    try {
+      let cleanStr = currencyStr.trim();
+      let isNegative = false;
+
+      // Check for parentheses notation (negative values)
+      if (cleanStr.startsWith('(') && cleanStr.endsWith(')')) {
+        isNegative = true;
+        cleanStr = cleanStr.slice(1, -1).trim(); // Remove parentheses
+      }
+
+      // Remove commas and any currency symbols
+      cleanStr = cleanStr.replace(/[,\$₱]/g, '').trim();
+
+      const num = parseFloat(cleanStr);
+      if (isNaN(num)) return null;
+
+      return isNegative ? -num : num;
+    } catch {
+      return null;
+    }
+  };
+
   const parseExcelData = (data: string) => {
     if (!data.trim()) {
       setParsedData([]);
@@ -155,12 +180,13 @@ export function SubmittedAppsUpload() {
         if (value) item.policy_number = value;
       }
 
+      // Parse submitted_apps (supports negative values in parentheses)
       if (columnMapping.submitted_apps !== undefined) {
         const value = cells[columnMapping.submitted_apps]?.trim();
         if (value) {
-          const numValue = parseFloat(value);
-          if (isNaN(numValue) || numValue < 0) {
-            rowErrors.push('Submitted Apps must be a positive number');
+          const numValue = parseCurrencyString(value);
+          if (numValue === null) {
+            rowErrors.push('Submitted Apps must be a valid number (negatives in parentheses)');
           } else {
             item.submitted_apps = numValue;
           }
