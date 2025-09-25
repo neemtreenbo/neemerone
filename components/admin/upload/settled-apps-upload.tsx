@@ -22,23 +22,62 @@ interface ParsedSettledApp {
   errors?: string[];
 }
 
+interface UploadResponse {
+  success: boolean;
+  message: string;
+  stats: {
+    recordsProcessed: number;
+    recordsInserted: number;
+    duplicatesRemoved: number;
+    errors: number;
+  };
+  errors?: string[];
+}
+
 export function SettledAppsUpload() {
   const [pasteData, setPasteData] = useState('');
   const [parsedData, setParsedData] = useState<ParsedSettledApp[]>([]);
   const [isValidData, setIsValidData] = useState(false);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const expectedColumns = [
     { key: 'advisor_code', label: 'Advisor Code', required: true },
     { key: 'advisor_name', label: 'Advisor Name', required: false },
-    { key: 'process_date', label: 'Process Date (YYYY-MM-DD)', required: false },
+    { key: 'process_date', label: 'Process Date (Month DD, YYYY)', required: false },
     { key: 'insured_name', label: 'Insured Name', required: false },
     { key: 'policy_number', label: 'Policy Number', required: false },
     { key: 'settled_apps', label: 'Settled Apps', required: false },
     { key: 'agency_credits', label: 'Agency Credits', required: false },
     { key: 'net_sales_credits', label: 'Net Sales Credits', required: false }
   ];
+
+  // Helper function to parse date from "Month DD, YYYY" format to "YYYY-MM-DD"
+  const parseDateString = (dateStr: string): string | null => {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper function to parse currency string (removes commas and converts to number)
+  const parseCurrencyString = (currencyStr: string): number | null => {
+    try {
+      // Remove commas and any currency symbols, then parse as float
+      const cleanStr = currencyStr.replace(/[,\$₱]/g, '').trim();
+      const num = parseFloat(cleanStr);
+      return isNaN(num) ? null : num;
+    } catch {
+      return null;
+    }
+  };
 
   const parseExcelData = (data: string) => {
     if (!data.trim()) {
@@ -61,16 +100,27 @@ export function SettledAppsUpload() {
     const errors: string[] = [];
     const parsed: ParsedSettledApp[] = [];
 
-    // Map headers to expected columns
+    // Map headers to expected columns (exact mapping for the Excel format)
     const columnMapping: Record<string, number> = {};
-    expectedColumns.forEach(col => {
+
+    // Find exact column positions based on expected Excel headers
+    const headerMappings = {
+      advisor_code: ['advisor code'],
+      advisor_name: ['advisor name'],
+      process_date: ['process date'],
+      insured_name: ['insured name'],
+      policy_number: ['policy number'],
+      settled_apps: ['settled apps'],
+      agency_credits: ['agency credits'],
+      net_sales_credits: ['net sales credits']
+    };
+
+    Object.entries(headerMappings).forEach(([key, possibleHeaders]) => {
       const headerIndex = headers.findIndex(h =>
-        h.includes(col.key.replace('_', ' ')) ||
-        h.includes(col.label.toLowerCase()) ||
-        h === col.key
+        possibleHeaders.some(ph => h.includes(ph))
       );
       if (headerIndex !== -1) {
-        columnMapping[col.key] = headerIndex;
+        columnMapping[key] = headerIndex;
       }
     });
 
@@ -94,40 +144,76 @@ export function SettledAppsUpload() {
         rowErrors.push('Advisor Code column not found');
       }
 
-      // Parse optional text fields
-      ['advisor_name', 'insured_name', 'policy_number'].forEach(field => {
-        if (columnMapping[field] !== undefined) {
-          const value = cells[columnMapping[field]]?.trim();
-          if (value) (item as unknown as Record<string, unknown>)[field] = value;
-        }
-      });
+      // Parse advisor_name
+      if (columnMapping.advisor_name !== undefined) {
+        const value = cells[columnMapping.advisor_name]?.trim();
+        if (value) item.advisor_name = value;
+      }
 
-      // Parse date field
+      // Parse date field with new format
       if (columnMapping.process_date !== undefined) {
         const value = cells[columnMapping.process_date]?.trim();
         if (value) {
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            rowErrors.push('Process Date must be YYYY-MM-DD format');
+          // Try to parse date from "Month DD, YYYY" format
+          const parsedDate = parseDateString(value);
+          if (parsedDate) {
+            item.process_date = parsedDate;
           } else {
-            item.process_date = value;
+            rowErrors.push('Process Date must be in "Month DD, YYYY" format (e.g., "September 24, 2025")');
           }
         }
       }
 
-      // Parse numeric fields
-      ['settled_apps', 'agency_credits', 'net_sales_credits'].forEach(field => {
-        if (columnMapping[field] !== undefined) {
-          const value = cells[columnMapping[field]]?.trim();
-          if (value) {
-            const numValue = parseFloat(value);
-            if (isNaN(numValue) || numValue < 0) {
-              rowErrors.push(`${field.replace('_', ' ')} must be a positive number`);
-            } else {
-              (item as unknown as Record<string, unknown>)[field] = numValue;
-            }
+      // Parse insured_name
+      if (columnMapping.insured_name !== undefined) {
+        const value = cells[columnMapping.insured_name]?.trim();
+        if (value) item.insured_name = value;
+      }
+
+      // Parse policy_number
+      if (columnMapping.policy_number !== undefined) {
+        const value = cells[columnMapping.policy_number]?.trim();
+        if (value) item.policy_number = value;
+      }
+
+      // Parse settled_apps (regular number)
+      if (columnMapping.settled_apps !== undefined) {
+        const value = cells[columnMapping.settled_apps]?.trim();
+        if (value) {
+          const numValue = parseFloat(value);
+          if (isNaN(numValue) || numValue < 0) {
+            rowErrors.push('Settled Apps must be a positive number');
+          } else {
+            item.settled_apps = numValue;
           }
         }
-      });
+      }
+
+      // Parse agency_credits (currency format)
+      if (columnMapping.agency_credits !== undefined) {
+        const value = cells[columnMapping.agency_credits]?.trim();
+        if (value) {
+          const numValue = parseCurrencyString(value);
+          if (numValue === null || numValue < 0) {
+            rowErrors.push('Agency Credits must be a positive number (currency format accepted)');
+          } else {
+            item.agency_credits = numValue;
+          }
+        }
+      }
+
+      // Parse net_sales_credits (currency format)
+      if (columnMapping.net_sales_credits !== undefined) {
+        const value = cells[columnMapping.net_sales_credits]?.trim();
+        if (value) {
+          const numValue = parseCurrencyString(value);
+          if (numValue === null || numValue < 0) {
+            rowErrors.push('Net Sales Credits must be a positive number (currency format accepted)');
+          } else {
+            item.net_sales_credits = numValue;
+          }
+        }
+      }
 
       if (rowErrors.length > 0) {
         item.errors = rowErrors;
@@ -153,18 +239,57 @@ export function SettledAppsUpload() {
     setParsedData([]);
     setIsValidData(false);
     setParseErrors([]);
+    setUploadResult(null);
+    setUploadError(null);
   };
 
   const handleUpload = async () => {
     if (!isValidData || parsedData.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+
     try {
-      console.log('Uploading settled apps data:', parsedData);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('Upload functionality will be implemented in the next phase');
+      // Filter out valid records only (those without errors)
+      const validRecords = parsedData
+        .filter(record => !record.errors || record.errors.length === 0)
+        .map(record => ({
+          advisor_code: record.advisor_code!,
+          advisor_name: record.advisor_name,
+          process_date: record.process_date,
+          insured_name: record.insured_name,
+          policy_number: record.policy_number,
+          settled_apps: record.settled_apps,
+          agency_credits: record.agency_credits,
+          net_sales_credits: record.net_sales_credits
+        }));
+
+      const response = await fetch('/api/admin/upload/settled-apps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: validRecords }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setUploadResult(result);
+
+      // Clear data on successful upload
+      if (result.success) {
+        setTimeout(() => {
+          clearData();
+        }, 3000); // Clear after 3 seconds to show success message
+      }
     } catch (error) {
       console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -248,11 +373,56 @@ export function SettledAppsUpload() {
         </Alert>
       )}
 
-      {isValidData && parsedData.length > 0 && (
+      {isValidData && parsedData.length > 0 && !uploadResult && (
         <Alert>
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
             Data parsed successfully! {parsedData.length} record{parsedData.length !== 1 ? 's' : ''} ready for upload.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Upload Error */}
+      {uploadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Upload failed: {uploadError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Upload Success */}
+      {uploadResult && uploadResult.success && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <div>{uploadResult.message}</div>
+              <div className="text-sm text-gray-600">
+                • Records processed: {uploadResult.stats.recordsProcessed}
+                • Records inserted: {uploadResult.stats.recordsInserted}
+                • Duplicates removed: {uploadResult.stats.duplicatesRemoved}
+                {uploadResult.stats.errors > 0 && (
+                  <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
+                )}
+              </div>
+              {uploadResult.errors && uploadResult.errors.length > 0 && (
+                <div className="mt-2">
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-red-600">View Errors ({uploadResult.errors.length})</summary>
+                    <ul className="mt-1 list-disc list-inside">
+                      {uploadResult.errors.slice(0, 5).map((error, index) => (
+                        <li key={index} className="text-red-600">{error}</li>
+                      ))}
+                      {uploadResult.errors.length > 5 && (
+                        <li className="text-red-600">... and {uploadResult.errors.length - 5} more errors</li>
+                      )}
+                    </ul>
+                  </details>
+                </div>
+              )}
+            </div>
           </AlertDescription>
         </Alert>
       )}
