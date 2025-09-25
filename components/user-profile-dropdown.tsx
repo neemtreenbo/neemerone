@@ -21,9 +21,10 @@ import { createClient } from '@/lib/supabase/client';
 
 interface UserProfileDropdownProps {
   className?: string;
+  variant?: 'default' | 'sidebar-expanded' | 'sidebar-collapsed';
 }
 
-export function UserProfileDropdown({ className = '' }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ className = '', variant = 'default' }: UserProfileDropdownProps) {
   const { user, profile, isLoading } = useUser();
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
@@ -63,13 +64,37 @@ export function UserProfileDropdown({ className = '' }: UserProfileDropdownProps
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={`relative h-auto p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 ${className}`}
+          className={`relative h-auto transition-colors ${
+            variant === 'sidebar-collapsed'
+              ? 'p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800'
+              : variant === 'sidebar-expanded'
+              ? 'p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 w-full'
+              : 'p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800'
+          } ${className}`}
         >
-          <UserAvatar
-            size="md"
-            showOnlineIndicator={true}
-            className="cursor-pointer"
-          />
+          {variant === 'sidebar-expanded' ? (
+            <div className="flex items-center space-x-3 w-full">
+              <UserAvatar
+                size="md"
+                showOnlineIndicator={true}
+                className="cursor-pointer flex-shrink-0"
+              />
+              <div className="flex-1 text-left overflow-hidden">
+                <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {displayName}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 truncate capitalize">
+                  {userRole}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <UserAvatar
+              size="md"
+              showOnlineIndicator={true}
+              className="cursor-pointer"
+            />
+          )}
         </Button>
       </DropdownMenuTrigger>
 

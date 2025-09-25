@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/sidebar-context';
 import { useUser } from '@/lib/contexts/user-context';
+import { UserProfileDropdown } from '@/components/user-profile-dropdown';
 
 export interface SidebarNavItem {
   label: string;
@@ -72,16 +73,12 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
         icon: TrendingUp,
         children: [
           {
-            label: 'Annual Production',
-            href: '/production/annual-production',
+            label: 'Personal Production',
+            href: '/production/personal-production',
           },
           {
-            label: 'Contest Month',
-            href: '/production/contest-month',
-          },
-          {
-            label: 'Monthly Production',
-            href: '/production/monthly-production',
+            label: 'Team Production',
+            href: '/team-production',
           },
         ],
       },
@@ -332,17 +329,19 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
           ))}
         </nav>
 
-        {/* Footer */}
-        {(!isCollapsed || isMobileOpen) && (
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-center font-medium">
-              Sun Life Philippines
+        {/* User Profile Section */}
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+          {(!isCollapsed || isMobileOpen) ? (
+            <div className="p-4">
+              {/* User Profile with Better Layout */}
+              <UserProfileDropdown variant="sidebar-expanded" />
             </div>
-            <div className="text-xs text-gray-400 dark:text-gray-500 text-center mt-0.5">
-              New Business Office
+          ) : (
+            <div className="p-3 flex justify-center">
+              <UserProfileDropdown variant="sidebar-collapsed" />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Mobile Overlay */}

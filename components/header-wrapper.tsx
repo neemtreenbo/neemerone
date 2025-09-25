@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { AppHeader } from '@/components/app-header';
 import { SidebarNavigation } from '@/components/sidebar-navigation';
 import { SidebarProvider, useSidebar } from '@/components/sidebar-context';
 
@@ -14,8 +13,7 @@ function HeaderContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={`transition-all duration-300 ease-in-out ${isCollapsed ? 'lg:pl-16' : 'lg:pl-64'}`}>
-      <AppHeader />
-      <main className="min-h-[calc(100vh-4rem)] p-4 lg:p-6">
+      <main className="min-h-screen p-4 lg:p-6">
         {children}
       </main>
     </div>
