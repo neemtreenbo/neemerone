@@ -465,43 +465,43 @@ export function SubmittedAppsUpload() {
 
           <div className="space-y-4">
             <div className="text-center space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center space-x-2">
-                  <Plus className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">New Records</span>
+                  <Plus className="h-4 w-4" />
+                  <span className="text-sm font-medium">New Records</span>
                 </div>
-                <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                <span className="text-lg font-bold">
                   {uploadResult?.stats.recordsInserted || 0}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center space-x-2">
-                  <RotateCcw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Updated (Duplicates)</span>
+                  <RotateCcw className="h-4 w-4" />
+                  <span className="text-sm font-medium">Updated (Duplicates)</span>
                 </div>
-                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                <span className="text-lg font-bold">
                   {uploadResult?.stats.recordsUpdated || 0}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Processed</span>
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="text-sm font-medium">Total Processed</span>
                 </div>
-                <span className="text-lg font-bold text-gray-600 dark:text-gray-300">
+                <span className="text-lg font-bold">
                   {uploadResult?.stats.recordsProcessed || 0}
                 </span>
               </div>
 
               {(uploadResult?.stats.errors || 0) > 0 && (
-                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                   <div className="flex items-center space-x-2">
-                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    <span className="text-sm font-medium text-red-700 dark:text-red-300">Errors</span>
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-medium text-destructive">Errors</span>
                   </div>
-                  <span className="text-lg font-bold text-red-600 dark:text-red-400">
+                  <span className="text-lg font-bold text-destructive">
                     {uploadResult?.stats.errors}
                   </span>
                 </div>
@@ -510,14 +510,14 @@ export function SubmittedAppsUpload() {
 
             {uploadResult?.errors && uploadResult.errors.length > 0 && (
               <details className="text-sm">
-                <summary className="cursor-pointer text-red-600 dark:text-red-400 mb-2">View Error Details</summary>
-                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg max-h-32 overflow-y-auto border border-red-200 dark:border-red-800">
+                <summary className="cursor-pointer text-destructive mb-2">View Error Details</summary>
+                <div className="bg-destructive/10 p-3 rounded-lg max-h-32 overflow-y-auto border border-destructive/20">
                   <ul className="list-disc list-inside space-y-1">
                     {uploadResult.errors.slice(0, 5).map((error, index) => (
-                      <li key={index} className="text-red-600 dark:text-red-400 text-xs">{error}</li>
+                      <li key={index} className="text-destructive text-xs">{error}</li>
                     ))}
                     {uploadResult.errors.length > 5 && (
-                      <li className="text-red-600 dark:text-red-400 text-xs">... and {uploadResult.errors.length - 5} more errors</li>
+                      <li className="text-destructive text-xs">... and {uploadResult.errors.length - 5} more errors</li>
                     )}
                   </ul>
                 </div>
