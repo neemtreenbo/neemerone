@@ -2,15 +2,17 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUserProfile } from '@/lib/auth';
 
-interface SettledAppData {
-  advisor_code: string;
-  advisor_name?: string;
+interface RNCommissionData {
+  code: string;
   process_date?: string;
   insured_name?: string;
   policy_number?: string;
-  settled_apps?: number;
-  agency_credits?: number;
-  net_sales_credits?: number;
+  transaction_type?: string;
+  rn_premium_php?: number;
+  due_date?: string;
+  rate?: number;
+  year?: number;
+  rn_commission_php?: number;
 }
 
 export async function POST(request: Request) {
@@ -28,19 +30,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { data: settledAppsData } = await request.json() as { data: SettledAppData[] };
+    const { data: rnCommissionData } = await request.json() as { data: RNCommissionData[] };
 
-    if (!settledAppsData || !Array.isArray(settledAppsData) || settledAppsData.length === 0) {
+    if (!rnCommissionData || !Array.isArray(rnCommissionData) || rnCommissionData.length === 0) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
 
     // Process uploads using RPC function
-    console.log(`Starting settled apps upload of ${settledAppsData.length} records`);
+    console.log(`Starting RN commission upload of ${rnCommissionData.length} records`);
 
     const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
-      p_table_name: 'settled_apps_details',
-      p_records: settledAppsData,
-      p_duplicate_fields: ['advisor_code', 'process_date', 'insured_name', 'policy_number']
+      p_table_name: 'rn_commission_details',
+      p_records: rnCommissionData,
+      p_duplicate_fields: ['code', 'process_date', 'insured_name', 'policy_number', 'year']
     });
 
     if (rpcError) {
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
       success: true,
       message: `Upload completed successfully`,
       stats: {
-        recordsProcessed: settledAppsData.length,
+        recordsProcessed: rnCommissionData.length,
         recordsInserted: result.records_inserted,
         duplicatesRemoved: result.duplicates_removed,
         errors: result.errors.length
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Settled apps upload error:', error);
+    console.error('RN commission upload error:', error);
     return NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

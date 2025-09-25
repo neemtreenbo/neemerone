@@ -114,11 +114,12 @@ export function SubmittedAppsUpload() {
         rowIndex: index + 2 // +2 because index starts at 0 and we skip header
       };
 
-      // Parse each expected column
+      // Parse each expected column - remove leading zeros to match manpower table
       if (columnMapping.advisor_code !== undefined) {
         const value = cells[columnMapping.advisor_code]?.trim();
         if (value) {
-          item.advisor_code = value;
+          // Remove leading zeros from advisor code (091395 -> 91395)
+          item.advisor_code = value.replace(/^0+/, '') || '0'; // Keep at least one zero if all zeros
         } else {
           rowErrors.push('Advisor Code is required');
         }

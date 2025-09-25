@@ -95,40 +95,6 @@ export function DataUploadInterface() {
           ))}
         </TabsList>
 
-        {/* Instructions Card */}
-        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2 text-blue-900 dark:text-blue-100">
-              <Upload className="h-5 w-5" />
-              <span>Excel Copy-Paste Instructions</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">How to Upload:</h4>
-                <ol className="list-decimal list-inside space-y-1">
-                  <li>Open your Excel file</li>
-                  <li>Select all data including headers</li>
-                  <li>Copy (Ctrl+C or Cmd+C)</li>
-                  <li>Paste into the text area below</li>
-                  <li>Review the parsed data</li>
-                  <li>Click Upload to save</li>
-                </ol>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Important Notes:</h4>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Include column headers in first row</li>
-                  <li>Date format: YYYY-MM-DD</li>
-                  <li>Numbers without currency symbols</li>
-                  <li>Empty cells are allowed</li>
-                  <li>Data is validated before upload</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Upload Forms */}
         <TabsContent value="submitted-apps">

@@ -32,72 +32,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
 
-    // Process uploads with duplicate detection
-    let duplicatesRemoved = 0;
-    let recordsInserted = 0;
-    const errors: string[] = [];
+    // Process uploads using RPC function
+    console.log(`Starting submitted apps upload of ${submittedAppsData.length} records`);
 
-    for (const record of submittedAppsData) {
-      try {
-        // Check for existing duplicates (same data except id, created_at, updated_at)
-        const { data: existingRecords, error: queryError } = await supabase
-          .from('submitted_apps_details')
-          .select('id, created_at')
-          .eq('advisor_code', record.advisor_code)
-          .eq('advisor_name', record.advisor_name || '')
-          .eq('process_date', record.process_date || '')
-          .eq('insured_name', record.insured_name || '')
-          .eq('policy_number', record.policy_number || '')
-          .eq('submitted_apps', record.submitted_apps || 0);
+    const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
+      p_table_name: 'submitted_apps_details',
+      p_records: submittedAppsData,
+      p_duplicate_fields: ['advisor_code', 'process_date', 'insured_name', 'policy_number']
+    });
 
-        if (queryError) {
-          errors.push(`Query error for ${record.advisor_code}: ${queryError.message}`);
-          continue;
-        }
+    if (rpcError) {
+      console.error('RPC error:', rpcError);
+      return NextResponse.json(
+        { error: 'Upload failed', details: rpcError.message },
+        { status: 500 }
+      );
+    }
 
-        // If duplicates exist, remove older ones (keep only the newest by created_at)
-        if (existingRecords && existingRecords.length > 0) {
-          // Sort by created_at descending to get newest first
-          const sortedRecords = existingRecords.sort((a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-
-          // Delete all existing records (we'll insert the new one)
-          const idsToDelete = sortedRecords.map(r => r.id);
-          const { error: deleteError } = await supabase
-            .from('submitted_apps_details')
-            .delete()
-            .in('id', idsToDelete);
-
-          if (deleteError) {
-            errors.push(`Delete error for ${record.advisor_code}: ${deleteError.message}`);
-            continue;
-          }
-
-          duplicatesRemoved += idsToDelete.length;
-        }
-
-        // Insert new record
-        const { error: insertError } = await supabase
-          .from('submitted_apps_details')
-          .insert({
-            advisor_code: record.advisor_code,
-            advisor_name: record.advisor_name || null,
-            process_date: record.process_date || null,
-            insured_name: record.insured_name || null,
-            policy_number: record.policy_number || null,
-            submitted_apps: record.submitted_apps || null
-          });
-
-        if (insertError) {
-          errors.push(`Insert error for ${record.advisor_code}: ${insertError.message}`);
-          continue;
-        }
-
-        recordsInserted++;
-      } catch (recordError) {
-        errors.push(`Processing error for ${record.advisor_code}: ${recordError}`);
-      }
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Upload failed', details: result.errors },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
@@ -105,11 +61,11 @@ export async function POST(request: Request) {
       message: `Upload completed successfully`,
       stats: {
         recordsProcessed: submittedAppsData.length,
-        recordsInserted,
-        duplicatesRemoved,
-        errors: errors.length
+        recordsInserted: result.records_inserted,
+        duplicatesRemoved: result.duplicates_removed,
+        errors: result.errors.length
       },
-      errors: errors.length > 0 ? errors : undefined
+      errors: result.errors.length > 0 ? result.errors : undefined
     });
 
   } catch (error) {

@@ -39,11 +39,6 @@ export default async function UploadPage() {
             <p className="text-gray-600 dark:text-gray-400 mt-2">
               Import sales data from Excel spreadsheets. Copy and paste data directly from Excel into the forms below.
             </p>
-            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Admin Only:</strong> This page is restricted to administrators for data management purposes.
-              </p>
-            </div>
           </div>
 
           {/* Upload Interface */}

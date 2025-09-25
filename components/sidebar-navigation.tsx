@@ -12,6 +12,7 @@ import {
   GraduationCap,
   GitBranch,
   Calendar,
+  Upload,
   ChevronDown,
   ChevronRight,
   Menu,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSidebar } from '@/components/sidebar-context';
+import { useUser } from '@/components/user-avatar';
 
 export interface SidebarNavItem {
   label: string;
@@ -36,6 +38,7 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, setIsCollapsed, setIsMobileOpen } = useSidebar();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { profile } = useUser();
 
   // Navigation menu structure
   const navigationItems: SidebarNavItem[] = [
@@ -128,6 +131,15 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
       icon: Calendar,
     },
   ];
+
+  // Add admin-only items conditionally
+  if (profile?.app_role === 'admin') {
+    navigationItems.push({
+      label: 'Upload',
+      href: '/upload',
+      icon: Upload,
+    });
+  }
 
   const toggleExpanded = (itemLabel: string) => {
     setExpandedItems(prev =>
