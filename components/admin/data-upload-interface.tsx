@@ -10,7 +10,6 @@ import { SubmittedAppsUpload } from './upload/submitted-apps-upload';
 import { SettledAppsUpload } from './upload/settled-apps-upload';
 import { FYCommissionUpload } from './upload/fy-commission-upload';
 import { RNCommissionUpload } from './upload/rn-commission-upload';
-import { DuplicateRemoval } from './duplicate-removal';
 
 export function DataUploadInterface() {
   const [activeTab, setActiveTab] = useState('submitted-apps');
@@ -115,10 +114,6 @@ export function DataUploadInterface() {
         </TabsContent>
       </Tabs>
 
-      {/* Data Cleanup Section */}
-      <div className="mt-8">
-        <DuplicateRemoval />
-      </div>
     </div>
   );
 }

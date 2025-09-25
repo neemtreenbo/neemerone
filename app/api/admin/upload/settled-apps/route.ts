@@ -34,13 +34,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
 
-    // Process uploads using RPC function
+    // Process uploads using table-specific RPC function with duplicate detection
     console.log(`Starting settled apps upload of ${settledAppsData.length} records`);
 
-    const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
-      p_table_name: 'settled_apps_details',
-      p_records: settledAppsData,
-      p_duplicate_fields: ['advisor_code', 'process_date', 'insured_name', 'policy_number']
+    const { data: result, error: rpcError } = await supabase.rpc('upload_settled_apps_with_dedup', {
+      p_records: settledAppsData
     });
 
     if (rpcError) {
@@ -64,10 +62,10 @@ export async function POST(request: Request) {
       stats: {
         recordsProcessed: settledAppsData.length,
         recordsInserted: result.records_inserted,
-        duplicatesRemoved: result.duplicates_removed,
-        errors: result.errors.length
+        recordsUpdated: result.records_updated,
+        errors: result.errors?.length || 0
       },
-      errors: result.errors.length > 0 ? result.errors : undefined
+      errors: (result.errors?.length || 0) > 0 ? result.errors : undefined
     });
 
   } catch (error) {

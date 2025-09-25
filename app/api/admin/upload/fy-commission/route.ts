@@ -88,12 +88,10 @@ export async function POST(request: Request) {
     console.log(`Starting FY commission upload of ${fyCommissionData.length} records`);
     console.log('Sample record:', fyCommissionData[0]);
 
-    // Direct upload - no test needed
-    console.log('Proceeding with upload...');
-    const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
-      p_table_name: 'fy_commission_details',
-      p_records: fyCommissionData,
-      p_duplicate_fields: ['code', 'process_date']
+    // Direct upload with table-specific duplicate detection
+    console.log('Proceeding with upload using FY commission specific function...');
+    const { data: result, error: rpcError } = await supabase.rpc('upload_fy_commission_with_dedup', {
+      p_records: fyCommissionData
     });
 
     console.log('RPC call completed:', {
@@ -124,7 +122,7 @@ export async function POST(request: Request) {
     console.log('Upload successful:', {
       recordsProcessed: fyCommissionData.length,
       recordsInserted: result.records_inserted,
-      duplicatesRemoved: result.duplicates_removed,
+      recordsUpdated: result.records_updated,
       errors: result.errors?.length || 0
     });
 
@@ -134,7 +132,7 @@ export async function POST(request: Request) {
       stats: {
         recordsProcessed: fyCommissionData.length,
         recordsInserted: result.records_inserted,
-        duplicatesRemoved: result.duplicates_removed,
+        recordsUpdated: result.records_updated,
         errors: result.errors?.length || 0
       },
       errors: (result.errors?.length || 0) > 0 ? result.errors : undefined

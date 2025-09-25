@@ -26,7 +26,7 @@ interface UploadResponse {
   stats: {
     recordsProcessed: number;
     recordsInserted: number;
-    duplicatesRemoved: number;
+    recordsUpdated: number;
     errors: number;
   };
   errors?: string[];
@@ -302,7 +302,7 @@ export function SubmittedAppsUpload() {
 
           if (result.success) {
             totalInserted += result.stats.recordsInserted;
-            totalDuplicatesRemoved += result.stats.duplicatesRemoved;
+            totalDuplicatesRemoved += result.stats.recordsUpdated;
             if (result.errors && result.errors.length > 0) {
               allErrors = allErrors.concat(result.errors);
             }
@@ -318,7 +318,7 @@ export function SubmittedAppsUpload() {
           stats: {
             recordsProcessed: validRecords.length,
             recordsInserted: totalInserted,
-            duplicatesRemoved: totalDuplicatesRemoved,
+            recordsUpdated: totalDuplicatesRemoved,
             errors: allErrors.length
           },
           errors: allErrors.length > 0 ? allErrors : undefined
@@ -496,7 +496,7 @@ export function SubmittedAppsUpload() {
               <div className="text-sm text-gray-600">
                 • Records processed: {uploadResult.stats.recordsProcessed}
                 • Records inserted: {uploadResult.stats.recordsInserted}
-                • Duplicates removed: {uploadResult.stats.duplicatesRemoved}
+                • Records updated (duplicates): {uploadResult.stats.recordsUpdated}
                 {uploadResult.stats.errors > 0 && (
                   <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
                 )}

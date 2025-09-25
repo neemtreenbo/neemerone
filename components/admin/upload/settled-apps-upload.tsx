@@ -28,7 +28,7 @@ interface UploadResponse {
   stats: {
     recordsProcessed: number;
     recordsInserted: number;
-    duplicatesRemoved: number;
+    recordsUpdated: number;
     errors: number;
   };
   errors?: string[];
@@ -416,7 +416,7 @@ export function SettledAppsUpload() {
               <div className="text-sm text-gray-600">
                 • Records processed: {uploadResult.stats.recordsProcessed}
                 • Records inserted: {uploadResult.stats.recordsInserted}
-                • Duplicates removed: {uploadResult.stats.duplicatesRemoved}
+                • Records updated (duplicates): {uploadResult.stats.recordsUpdated}
                 {uploadResult.stats.errors > 0 && (
                   <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
                 )}

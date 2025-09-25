@@ -85,12 +85,10 @@ export async function POST(request: Request) {
     console.log(`Starting submitted apps upload of ${submittedAppsData.length} records`);
     console.log('Sample record:', submittedAppsData[0]);
 
-    // Direct upload - no test needed
-    console.log('Proceeding with upload...');
-    const { data: result, error: rpcError } = await supabase.rpc('upload_with_deduplication', {
-      p_table_name: 'submitted_apps_details',
-      p_records: submittedAppsData,
-      p_duplicate_fields: ['advisor_code', 'process_date', 'insured_name', 'policy_number']
+    // Direct upload with table-specific duplicate detection
+    console.log('Proceeding with upload using table-specific function...');
+    const { data: result, error: rpcError } = await supabase.rpc('upload_submitted_apps_with_dedup', {
+      p_records: submittedAppsData
     });
 
     console.log('RPC call completed:', {
@@ -121,7 +119,7 @@ export async function POST(request: Request) {
     console.log('Upload successful:', {
       recordsProcessed: submittedAppsData.length,
       recordsInserted: result.records_inserted,
-      duplicatesRemoved: result.duplicates_removed,
+      recordsUpdated: result.records_updated,
       errors: result.errors?.length || 0
     });
 
@@ -131,7 +129,7 @@ export async function POST(request: Request) {
       stats: {
         recordsProcessed: submittedAppsData.length,
         recordsInserted: result.records_inserted,
-        duplicatesRemoved: result.duplicates_removed,
+        recordsUpdated: result.records_updated,
         errors: result.errors?.length || 0
       },
       errors: (result.errors?.length || 0) > 0 ? result.errors : undefined
