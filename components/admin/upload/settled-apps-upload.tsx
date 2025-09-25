@@ -259,7 +259,7 @@ export function SettledAppsUpload() {
 
       {parsedData.length > 0 && (
         <DataPreviewTable
-          data={parsedData as Record<string, unknown>[]}
+          data={parsedData as unknown as Record<string, unknown>[]}
           title="Settled Applications Preview"
           onUpload={handleUpload}
           isUploading={isUploading}

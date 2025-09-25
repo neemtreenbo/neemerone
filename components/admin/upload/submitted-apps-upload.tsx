@@ -20,21 +20,48 @@ interface ParsedSubmittedApp {
   errors?: string[];
 }
 
+interface UploadResponse {
+  success: boolean;
+  message: string;
+  stats: {
+    recordsProcessed: number;
+    recordsInserted: number;
+    duplicatesRemoved: number;
+    errors: number;
+  };
+  errors?: string[];
+}
+
 export function SubmittedAppsUpload() {
   const [pasteData, setPasteData] = useState('');
   const [parsedData, setParsedData] = useState<ParsedSubmittedApp[]>([]);
   const [isValidData, setIsValidData] = useState(false);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const expectedColumns = [
     { key: 'advisor_code', label: 'Advisor Code', required: true },
     { key: 'advisor_name', label: 'Advisor Name', required: false },
-    { key: 'process_date', label: 'Process Date (YYYY-MM-DD)', required: false },
+    { key: 'process_date', label: 'Process Date (Month DD, YYYY)', required: false },
     { key: 'insured_name', label: 'Insured Name', required: false },
     { key: 'policy_number', label: 'Policy Number', required: false },
     { key: 'submitted_apps', label: 'Submitted Apps', required: false }
   ];
+
+  // Helper function to parse date from "Month DD, YYYY" format to "YYYY-MM-DD"
+  const parseDateString = (dateStr: string): string | null => {
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    } catch {
+      return null;
+    }
+  };
 
   const parseExcelData = (data: string) => {
     if (!data.trim()) {
@@ -57,16 +84,25 @@ export function SubmittedAppsUpload() {
     const errors: string[] = [];
     const parsed: ParsedSubmittedApp[] = [];
 
-    // Map headers to expected columns
+    // Map headers to expected columns (exact mapping for the Excel format)
     const columnMapping: Record<string, number> = {};
-    expectedColumns.forEach(col => {
+
+    // Find exact column positions based on expected Excel headers
+    const headerMappings = {
+      advisor_code: ['advisor code'],
+      advisor_name: ['advisor name'],
+      process_date: ['process date'],
+      insured_name: ['insured name'],
+      policy_number: ['policy number'],
+      submitted_apps: ['submitted apps']
+    };
+
+    Object.entries(headerMappings).forEach(([key, possibleHeaders]) => {
       const headerIndex = headers.findIndex(h =>
-        h.includes(col.key.replace('_', ' ')) ||
-        h.includes(col.label.toLowerCase()) ||
-        h === col.key
+        possibleHeaders.some(ph => h.includes(ph))
       );
       if (headerIndex !== -1) {
-        columnMapping[col.key] = headerIndex;
+        columnMapping[key] = headerIndex;
       }
     });
 
@@ -98,11 +134,12 @@ export function SubmittedAppsUpload() {
       if (columnMapping.process_date !== undefined) {
         const value = cells[columnMapping.process_date]?.trim();
         if (value) {
-          // Validate date format
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            rowErrors.push('Process Date must be YYYY-MM-DD format');
+          // Try to parse date from "Month DD, YYYY" format
+          const parsedDate = parseDateString(value);
+          if (parsedDate) {
+            item.process_date = parsedDate;
           } else {
-            item.process_date = value;
+            rowErrors.push('Process Date must be in "Month DD, YYYY" format (e.g., "September 24, 2025")');
           }
         }
       }
@@ -153,23 +190,55 @@ export function SubmittedAppsUpload() {
     setParsedData([]);
     setIsValidData(false);
     setParseErrors([]);
+    setUploadResult(null);
+    setUploadError(null);
   };
 
   const handleUpload = async () => {
     if (!isValidData || parsedData.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
+    setUploadResult(null);
+
     try {
-      // TODO: Implement actual upload logic here
-      console.log('Uploading submitted apps data:', parsedData);
+      // Filter out valid records only (those without errors)
+      const validRecords = parsedData
+        .filter(record => !record.errors || record.errors.length === 0)
+        .map(record => ({
+          advisor_code: record.advisor_code!,
+          advisor_name: record.advisor_name,
+          process_date: record.process_date,
+          insured_name: record.insured_name,
+          policy_number: record.policy_number,
+          submitted_apps: record.submitted_apps
+        }));
 
-      // Simulate upload delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch('/api/admin/upload/submitted-apps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: validRecords }),
+      });
 
-      // For now, just show success
-      alert('Upload functionality will be implemented in the next phase');
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      setUploadResult(result);
+
+      // Clear data on successful upload
+      if (result.success) {
+        setTimeout(() => {
+          clearData();
+        }, 3000); // Clear after 3 seconds to show success message
+      }
     } catch (error) {
       console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -258,7 +327,7 @@ export function SubmittedAppsUpload() {
       )}
 
       {/* Success State */}
-      {isValidData && parsedData.length > 0 && (
+      {isValidData && parsedData.length > 0 && !uploadResult && (
         <Alert>
           <CheckCircle className="h-4 w-4" />
           <AlertDescription>
@@ -267,10 +336,55 @@ export function SubmittedAppsUpload() {
         </Alert>
       )}
 
+      {/* Upload Error */}
+      {uploadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Upload failed: {uploadError}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Upload Success */}
+      {uploadResult && uploadResult.success && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <div>{uploadResult.message}</div>
+              <div className="text-sm text-gray-600">
+                • Records processed: {uploadResult.stats.recordsProcessed}
+                • Records inserted: {uploadResult.stats.recordsInserted}
+                • Duplicates removed: {uploadResult.stats.duplicatesRemoved}
+                {uploadResult.stats.errors > 0 && (
+                  <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
+                )}
+              </div>
+              {uploadResult.errors && uploadResult.errors.length > 0 && (
+                <div className="mt-2">
+                  <details className="text-sm">
+                    <summary className="cursor-pointer text-red-600">View Errors ({uploadResult.errors.length})</summary>
+                    <ul className="mt-1 list-disc list-inside">
+                      {uploadResult.errors.slice(0, 5).map((error, index) => (
+                        <li key={index} className="text-red-600">{error}</li>
+                      ))}
+                      {uploadResult.errors.length > 5 && (
+                        <li className="text-red-600">... and {uploadResult.errors.length - 5} more errors</li>
+                      )}
+                    </ul>
+                  </details>
+                </div>
+              )}
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Data Preview */}
       {parsedData.length > 0 && (
         <DataPreviewTable
-          data={parsedData as Record<string, unknown>[]}
+          data={parsedData as unknown as Record<string, unknown>[]}
           title="Submitted Applications Preview"
           onUpload={handleUpload}
           isUploading={isUploading}
