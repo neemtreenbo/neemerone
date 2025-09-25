@@ -378,15 +378,15 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
             <div className="space-y-2">
               <Label htmlFor="team_id">Team</Label>
               <Select
-                value={formData.team_id || ''}
-                onValueChange={(value) => handleInputChange('team_id', value)}
+                value={formData.team_id || 'none'}
+                onValueChange={(value) => handleInputChange('team_id', value === 'none' ? '' : value)}
                 disabled={teamsLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={teamsLoading ? "Loading teams..." : "Select a team"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Team</SelectItem>
+                  <SelectItem value="none">No Team</SelectItem>
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.unit_name || team.unit_code || 'Unnamed Team'}

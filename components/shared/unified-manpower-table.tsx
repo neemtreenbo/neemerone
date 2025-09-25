@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { ManpowerRecord } from '@/lib/types/database';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ManpowerQuery } from '../manpower/manpower-query';
+import ManpowerForm from '@/components/admin/manpower-form';
 
 interface UnifiedManpowerTableProps {
   data: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[];
@@ -19,6 +21,7 @@ export default function UnifiedManpowerTable({
   description
 }: UnifiedManpowerTableProps) {
   const isAdminMode = mode === 'admin';
+  const [showAddForm, setShowAddForm] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -33,7 +36,7 @@ export default function UnifiedManpowerTable({
           )}
         </div>
         {isAdminMode && (
-          <Button>
+          <Button onClick={() => setShowAddForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Advisor
           </Button>
@@ -51,6 +54,15 @@ export default function UnifiedManpowerTable({
           allowAdminActions: isAdminMode
         }}
       />
+
+      {/* Add Advisor Form */}
+      {isAdminMode && (
+        <ManpowerForm
+          isOpen={showAddForm}
+          onOpenChange={setShowAddForm}
+          mode="create"
+        />
+      )}
     </div>
   );
 }
