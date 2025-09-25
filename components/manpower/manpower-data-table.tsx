@@ -28,7 +28,7 @@ import {
   HierarchyBadge,
   StatusBadge,
   ClassBadge,
-  UnitCodeDisplay,
+  TeamNameDisplay,
   SortableHeader,
   formatDate,
   type SortField,
@@ -36,7 +36,7 @@ import {
 } from './manpower-table-components';
 
 interface ManpowerDataTableProps {
-  data: (ManpowerRecord & { hierarchy_level?: string })[];
+  data: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[];
   mode?: 'admin' | 'regular';
   searchQuery: string;
   statusFilter: 'active' | 'cancelled' | 'all';
@@ -112,8 +112,9 @@ export function ManpowerDataTable({
         bValue = b.code_number;
         break;
       case 'unit_code':
-        aValue = a.unit_code;
-        bValue = b.unit_code;
+        // Sort by team name if available, otherwise by unit code
+        aValue = a.team_name || a.unit_code;
+        bValue = b.team_name || b.unit_code;
         break;
       case 'status':
         aValue = a.status;
@@ -213,7 +214,7 @@ export function ManpowerDataTable({
         <div className="p-8 text-center">
           {searchQuery ? (
             <p className="text-gray-500 dark:text-gray-400 mb-2">
-              No advisors found matching "{searchQuery}"
+              No advisors found matching &ldquo;{searchQuery}&rdquo;
             </p>
           ) : (
             <>
@@ -248,7 +249,7 @@ export function ManpowerDataTable({
                 Code
               </SortableHeader>
               <SortableHeader field="unit_code" currentSort={sortConfig} onSort={handleSort}>
-                Unit Code
+                Team
               </SortableHeader>
               <SortableHeader field="status" currentSort={sortConfig} onSort={handleSort}>
                 Status
@@ -299,7 +300,7 @@ export function ManpowerDataTable({
                   {record.code_number}
                 </TableCell>
                 <TableCell>
-                  <UnitCodeDisplay unitCode={record.unit_code} />
+                  <TeamNameDisplay teamName={record.team_name} unitCode={record.unit_code} />
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={record.status} />

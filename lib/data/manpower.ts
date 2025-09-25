@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { ManpowerRecord } from '@/lib/types/database';
 
 export interface ManpowerDataResult {
-  data: (ManpowerRecord & { hierarchy_level?: string })[] | null;
+  data: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[] | null;
   error: Error | null;
 }
 
@@ -33,10 +33,13 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
       userManpowerCode = manpowerLink?.code_number || null;
     }
 
-    // Fetch manpower data - RLS will filter automatically
+    // Fetch manpower data with team names - RLS will filter automatically
     const { data: manpowerData, error: dataError } = await supabase
       .from('manpower')
-      .select('*')
+      .select(`
+        *,
+        teams(unit_name)
+      `)
       .order('advisor_name', { ascending: true });
 
     if (dataError) {
@@ -48,19 +51,19 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
     }
 
     // For performance, batch get all subordinates once instead of per record
-    let allSubordinates: any[] = [];
+    let allSubordinates: { subordinate_code: string; level_depth: number }[] = [];
     if (userManpowerCode && manpowerData && manpowerData.length > 0) {
       const { data: subordinatesData } = await supabase
         .rpc('get_all_subordinates', { manager_code: userManpowerCode });
       allSubordinates = subordinatesData || [];
     }
 
-    // Add hierarchy levels to each record efficiently
-    const dataWithHierarchy = (manpowerData || []).map((record) => {
+    // Add hierarchy levels and team names to each record efficiently
+    const dataWithHierarchy = (manpowerData || []).map((record: ManpowerRecord & { teams?: { unit_name?: string } }) => {
       let hierarchyLevel = '';
 
       if (userManpowerCode && record.code_number !== userManpowerCode) {
-        const subordinate = allSubordinates.find((sub: any) => sub.subordinate_code === record.code_number);
+        const subordinate = allSubordinates.find((sub) => sub.subordinate_code === record.code_number);
 
         if (subordinate) {
           const level = subordinate.level_depth;
@@ -74,14 +77,21 @@ export async function fetchManpowerData(): Promise<ManpowerDataResult> {
         }
       }
 
+      // Extract team name from the joined teams data
+      const teamName = record.teams?.unit_name || null;
+
+      // Remove the teams object from the record to keep it clean
+      const { teams: _teams, ...cleanRecord } = record;
+
       return {
-        ...record,
-        hierarchy_level: hierarchyLevel
+        ...cleanRecord,
+        hierarchy_level: hierarchyLevel,
+        team_name: teamName
       };
     });
 
     return {
-      data: dataWithHierarchy as (ManpowerRecord & { hierarchy_level?: string })[],
+      data: dataWithHierarchy as (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[],
       error: null
     };
   } catch (error) {

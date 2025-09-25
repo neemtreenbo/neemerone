@@ -76,11 +76,24 @@ export function ClassBadge({ advisorClass }: { advisorClass?: string }) {
   return <Badge variant={variant}>{advisorClass}</Badge>;
 }
 
-// Unit Code Display Component
-export function UnitCodeDisplay({ unitCode }: { unitCode?: string }) {
-  if (!unitCode) return <span className="text-gray-400 text-sm">-</span>;
+// Team Name Display Component (formerly Unit Code Display)
+export function TeamNameDisplay({ teamName, unitCode }: { teamName?: string; unitCode?: string }) {
+  // Prioritize team name, fallback to unit code if team name is not available
+  const displayValue = teamName || unitCode;
 
-  return <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{unitCode}</span>;
+  if (!displayValue) return <span className="text-gray-400 text-sm">-</span>;
+
+  // Use different styling for team name vs unit code fallback
+  const className = teamName
+    ? "text-sm text-gray-700 dark:text-gray-300"
+    : "font-mono text-sm text-gray-500 dark:text-gray-400";
+
+  return <span className={className}>{displayValue}</span>;
+}
+
+// Keep the old function for backward compatibility (deprecated)
+export function UnitCodeDisplay({ unitCode }: { unitCode?: string }) {
+  return <TeamNameDisplay unitCode={unitCode} />;
 }
 
 // Hierarchy Badge Component

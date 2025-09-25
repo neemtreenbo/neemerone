@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react';
 import { ManpowerQuery } from '../manpower/manpower-query';
 
 interface UnifiedManpowerTableProps {
-  data: (ManpowerRecord & { hierarchy_level?: string })[];
+  data: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[];
   mode?: 'admin' | 'regular';
   title?: string;
   description?: string;

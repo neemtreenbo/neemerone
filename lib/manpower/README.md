@@ -1,10 +1,10 @@
-# Manpower Pages Refactoring
+# Unified Manpower Page
 
-This document explains the refactored structure for the manpower pages, designed for better maintainability and reusability.
+This document explains the consolidated manpower page structure, designed for simplicity and maintainability.
 
 ## Overview
 
-The manpower functionality is now organized into reusable components and utilities that eliminate code duplication between `/manpower` and `/admin/manpower` pages.
+The manpower functionality has been consolidated into a single `/manpower` page that dynamically shows admin actions based on user role, eliminating the confusion of dual routes.
 
 ## Architecture
 
@@ -13,117 +13,104 @@ The manpower functionality is now organized into reusable components and utiliti
 ```
 ├── lib/
 │   ├── auth/
-│   │   └── manpower-auth.ts          # Authentication utilities
+│   │   └── manpower-auth.ts          # Simplified authentication utilities
 │   └── data/
 │       └── manpower.ts               # Data fetching utilities
 ├── components/
 │   ├── manpower/
-│   │   └── manpower-page-wrapper.tsx # Reusable page components
+│   │   └── manpower-page-wrapper.tsx # Simplified page components
 │   └── shared/
-│       └── unified-manpower-table.tsx # Table component (unchanged)
+│       └── unified-manpower-table.tsx # Table component with role-based features
 └── app/
-    ├── manpower/page.tsx              # Regular manpower page
-    └── admin/manpower/page.tsx        # Admin manpower page
+    └── manpower/page.tsx              # Single consolidated manpower page
 ```
 
 ### 🔧 **Components Breakdown**
 
 #### **1. Authentication Layer** (`lib/auth/manpower-auth.ts`)
-- `authenticateRegularManpower()` - Handles regular user auth + admin redirect
-- `authenticateAdminManpower()` - Handles admin-only authentication
-- Centralized authentication logic with proper redirects
+- `authenticateManpower()` - Simple authentication for all users
+- Removed role-based redirects and complexity
+- Clean and straightforward authentication logic
 
 #### **2. Data Layer** (`lib/data/manpower.ts`)
 - `fetchManpowerData()` - Single source of truth for manpower data fetching
 - Consistent error handling and data transformation
-- Shared between both pages
 
 #### **3. Presentation Layer** (`components/manpower/manpower-page-wrapper.tsx`)
-- `ManpowerPageWrapper` - Success state component
+- `ManpowerPageWrapper` - Success state component with role-based logic
 - `ManpowerErrorPage` - Error state component
-- `MANPOWER_PAGE_CONFIGS` - Predefined configurations for each page type
-- Type-safe configuration system
+- Simplified props interface using `isAdmin` boolean
 
 ## Benefits
 
-### ✅ **Code Reusability**
-- **Before**: ~77 lines of duplicated code per page
-- **After**: ~37 lines per page, shared utilities
-- **Reduction**: ~52% less code duplication
+### ✅ **Simplified Navigation**
+- **Before**: Confusing dual routes `/manpower` and `/admin/manpower`
+- **After**: Single `/manpower` route for all users
+- **Result**: Better user experience and less confusion
 
-### ✅ **Maintainability**
-- Single point of failure for data fetching
-- Centralized authentication logic
-- Consistent error handling across pages
-- Type-safe configurations
+### ✅ **Code Maintainability**
+- Eliminated duplicate page structure
+- Single source of truth for manpower functionality
+- Simplified authentication logic
+- Reduced complexity in navigation components
 
-### ✅ **Scalability**
-- Easy to add new manpower page variants
-- Simple configuration-based approach
-- Shared utilities can be extended for other features
+### ✅ **Role-Based Features**
+- Admin users see additional action buttons and features
+- Regular users see read-only interface
+- Dynamic UI based on user permissions
+- Seamless experience for both user types
 
 ### ✅ **Developer Experience**
-- Clear separation of concerns
-- Self-documenting configuration system
-- Easier testing and debugging
+- Easier to maintain and debug
+- Single codebase for all manpower functionality
+- Clear separation between UI logic and role detection
+- Simplified testing scenarios
 
 ## Usage
 
-### Adding a New Manpower Page Variant
+### The Single Page Structure
 
-1. **Add configuration:**
 ```typescript
-export const MANPOWER_PAGE_CONFIGS = {
-  // ... existing configs
-  newVariant: {
-    mode: 'regular' as const,
-    pageTitle: 'New Variant Title',
-    pageDescription: 'Description...',
-    tableTitle: 'Table Title',
-    tableDescription: 'Table description...'
+export default async function Manpower() {
+  // Simple authentication for all users
+  const supabase = await createClient();
+  const { data: user, error: authError } = await supabase.auth.getClaims();
+  if (authError || !user?.claims) {
+    redirect('/auth/login');
   }
-} as const;
-```
 
-2. **Create the page:**
-```typescript
-export default async function NewVariantPage() {
-  await authenticateRegularManpower(); // or authenticateAdminManpower()
+  // Determine user role
+  const { profile } = await getCurrentUserProfile();
+  const isAdmin = profile?.app_role === 'admin';
+
+  // Fetch data
   const { data, error } = await fetchManpowerData();
 
-  if (error || !data) {
-    return <ManpowerErrorPage error={error} config={MANPOWER_PAGE_CONFIGS.newVariant} />;
-  }
-
-  return <ManpowerPageWrapper data={data} config={MANPOWER_PAGE_CONFIGS.newVariant} />;
+  // Render with role-based features
+  return <ManpowerPageWrapper data={data} isAdmin={isAdmin} />;
 }
 ```
 
-### Customizing Authentication
+### Role-Based UI Features
 
-The authentication utilities can be extended:
+The `UnifiedManpowerTable` component automatically shows/hides features based on the `mode` prop:
 
-```typescript
-// Custom authentication for specific use cases
-export async function authenticateManagersOnly(): Promise<void> {
-  // Implementation for managers-only access
-}
-```
+- **Admin mode**: Add/Edit/Delete buttons, bulk operations, advanced filters
+- **Regular mode**: Read-only view, basic search and filtering
 
-## Migration Notes
+## Migration Benefits
 
-The refactoring maintains 100% backward compatibility:
-- All existing functionality preserved
-- Same authentication flows
-- Same UI/UX behavior
-- Same data fetching patterns
-- All photo upload and status filtering features intact
+This consolidation provides:
+- **Eliminated confusion**: Single URL for all users
+- **Reduced maintenance**: One codebase instead of two similar pages
+- **Better UX**: No more redirects or separate admin routes
+- **Simplified navigation**: All nav components point to `/manpower`
+- **Maintained functionality**: All existing features preserved
 
 ## Future Enhancements
 
-This architecture supports easy extension for:
-- Role-based page variants
-- Different data sources
-- Custom filtering logic
-- Additional authentication strategies
-- Page-specific customizations
+This unified approach enables:
+- Easy addition of new role-based features
+- Simplified testing and debugging
+- Better performance (no unnecessary redirects)
+- Cleaner codebase for future developers

@@ -2,13 +2,12 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { checkAdminAccess, getCurrentUserProfile } from '@/lib/auth';
 
 /**
- * Handle authentication for regular manpower page
- * Redirects admins to admin manpower page
+ * Handle authentication for manpower page
+ * Ensures user is authenticated (works for both admin and regular users)
  */
-export async function authenticateRegularManpower(): Promise<void> {
+export async function authenticateManpower(): Promise<void> {
   try {
     const supabase = await createClient();
 
@@ -22,31 +21,8 @@ export async function authenticateRegularManpower(): Promise<void> {
     if (!user?.claims) {
       redirect('/auth/login');
     }
-
-    // Smart routing: If user is admin, redirect to admin manpower page
-    const { profile } = await getCurrentUserProfile();
-    if (profile?.app_role === 'admin') {
-      redirect('/admin/manpower');
-    }
   } catch (error) {
-    console.error('Regular manpower auth error:', error);
-    redirect('/auth/error');
-  }
-}
-
-/**
- * Handle authentication for admin manpower page
- * Ensures user has admin access
- */
-export async function authenticateAdminManpower(): Promise<void> {
-  try {
-    // Check admin access
-    const { isAdmin } = await checkAdminAccess();
-    if (!isAdmin) {
-      redirect('/auth/login');
-    }
-  } catch (error) {
-    console.error('Admin manpower auth error:', error);
+    console.error('Manpower auth error:', error);
     redirect('/auth/error');
   }
 }

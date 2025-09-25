@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ManpowerRecord, Insert, Update } from '@/lib/types/database';
+import { ManpowerRecord, Insert, Update, Team } from '@/lib/types/database';
 import { createManpowerRecord, updateManpowerRecord, deleteManpowerPhoto } from '@/lib/actions/manpower';
+import { createClient } from '@/lib/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -60,8 +61,12 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
     status: 'Active',
     class: 'Individual',
     unit_code: '',
+    team_id: '',
     photo_url: ''
   });
+
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
 
   // Update form data when record or mode changes
   useEffect(() => {
@@ -80,12 +85,41 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
         status: 'Active',
         class: 'Individual',
         unit_code: '',
+        team_id: '',
         photo_url: ''
       });
     }
     setPhotoFile(null);
     setErrors({});
   }, [mode, record, isOpen]);
+
+  // Fetch teams data
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchTeams = async () => {
+      setTeamsLoading(true);
+      try {
+        const supabase = createClient();
+        const { data: teamsData, error } = await supabase
+          .from('teams')
+          .select('*')
+          .order('unit_name', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching teams:', error);
+        } else {
+          setTeams(teamsData || []);
+        }
+      } catch (error) {
+        console.error('Unexpected error fetching teams:', error);
+      } finally {
+        setTeamsLoading(false);
+      }
+    };
+
+    fetchTeams();
+  }, [isOpen]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -192,7 +226,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
           date_hired: formData.date_hired || undefined,
           status: formData.status || undefined,
           class: formData.class || undefined,
-          unit_code: formData.unit_code || undefined,
+          team_id: formData.team_id || undefined,
           photo_url: formData.photo_url || undefined,
         };
         result = await createManpowerRecord(insertData, submitFormData);
@@ -207,7 +241,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
           date_hired: formData.date_hired || undefined,
           status: formData.status || undefined,
           class: formData.class || undefined,
-          unit_code: formData.unit_code || undefined,
+          team_id: formData.team_id || undefined,
           photo_url: formData.photo_url || undefined,
         };
         result = await updateManpowerRecord(formData.code_number!, updateData, submitFormData);
@@ -229,6 +263,7 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
             status: 'Active',
             class: 'Individual',
             unit_code: '',
+            team_id: '',
             photo_url: ''
           });
           setPhotoFile(null);
@@ -341,12 +376,24 @@ export default function ManpowerForm({ isOpen, onOpenChange, record, mode }: Man
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unit_code">Unit Code</Label>
-              <Input
-                id="unit_code"
-                value={formData.unit_code || ''}
-                onChange={(e) => handleInputChange('unit_code', e.target.value)}
-              />
+              <Label htmlFor="team_id">Team</Label>
+              <Select
+                value={formData.team_id || ''}
+                onValueChange={(value) => handleInputChange('team_id', value)}
+                disabled={teamsLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={teamsLoading ? "Loading teams..." : "Select a team"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Team</SelectItem>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.unit_name || team.unit_code || 'Unnamed Team'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

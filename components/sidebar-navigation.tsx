@@ -19,7 +19,6 @@ import {
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/components/user-avatar';
 import { useSidebar } from '@/components/sidebar-context';
 
 export interface SidebarNavItem {
@@ -34,15 +33,9 @@ interface SidebarNavigationProps {
 }
 
 export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
-  const { profile } = useUser();
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, setIsCollapsed, setIsMobileOpen } = useSidebar();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-  // Smart navigation based on user role
-  const getManpowerHref = () => {
-    return profile?.app_role === 'admin' ? '/admin/manpower' : '/manpower';
-  };
 
   // Navigation menu structure
   const navigationItems: SidebarNavItem[] = [
@@ -53,7 +46,7 @@ export function SidebarNavigation({ className = '' }: SidebarNavigationProps) {
     },
     {
       label: 'Manpower',
-      href: getManpowerHref(),
+      href: '/manpower',
       icon: Users,
     },
     {

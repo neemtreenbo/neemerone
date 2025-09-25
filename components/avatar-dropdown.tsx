@@ -38,11 +38,6 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
-  // Smart navigation based on user role
-  const getManpowerHref = () => {
-    return profile?.app_role === 'admin' ? '/admin/manpower' : '/manpower';
-  };
-
   // Navigation menu structure
   const navigationItems: NavMenuItem[] = [
     {
@@ -52,7 +47,7 @@ export function AvatarDropdown({ className = '' }: AvatarDropdownProps) {
     },
     {
       label: 'Manpower',
-      href: getManpowerHref(),
+      href: '/manpower',
       icon: Users,
     },
     {

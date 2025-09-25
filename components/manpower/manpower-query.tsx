@@ -5,6 +5,14 @@ import { ManpowerRecord } from '@/lib/types/database';
 import { ManpowerSummaryCards } from './manpower-summary-cards';
 import { ManpowerSearchFilter } from './manpower-search-filter';
 import { ManpowerDataTable } from './manpower-data-table';
+import {
+  ClassCategory,
+  MonthFilter,
+  classMatchesCategory,
+  dateMatchesMonth,
+  recordMatchesTeam,
+  getUniqueTeams,
+} from '@/lib/utils/manpower-filters';
 
 type StatusFilter = 'active' | 'cancelled' | 'all';
 
@@ -24,12 +32,12 @@ export interface ManpowerQueryConfig {
   customTitle?: string;
   customDescription?: string;
   visibleColumns?: Array<'profile' | 'name' | 'hierarchy' | 'code' | 'unit_code' | 'status' | 'class' | 'date_hired' | 'birthday'>;
-  onRecordSelect?: (record: ManpowerRecord & { hierarchy_level?: string }) => void;
-  onRecordMultiSelect?: (records: (ManpowerRecord & { hierarchy_level?: string })[]) => void;
+  onRecordSelect?: (record: ManpowerRecord & { hierarchy_level?: string; team_name?: string }) => void;
+  onRecordMultiSelect?: (records: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[]) => void;
 }
 
 interface ManpowerQueryProps {
-  data: (ManpowerRecord & { hierarchy_level?: string })[];
+  data: (ManpowerRecord & { hierarchy_level?: string; team_name?: string })[];
   config?: Partial<ManpowerQueryConfig>;
   className?: string;
 }
@@ -84,6 +92,10 @@ export function ManpowerQuery({
 }: ManpowerQueryProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [classFilter, setClassFilter] = useState<ClassCategory>('all');
+  const [dateHiredMonthFilter, setDateHiredMonthFilter] = useState<MonthFilter>('all');
+  const [birthdayMonthFilter, setBirthdayMonthFilter] = useState<MonthFilter>('all');
+  const [teamFilter, setTeamFilter] = useState<string>('all');
 
   // Merge config with defaults
   const finalConfig: ManpowerQueryConfig = {
@@ -91,11 +103,14 @@ export function ManpowerQuery({
     ...config
   };
 
+  // Calculate available teams
+  const availableTeams = useMemo(() => getUniqueTeams(data), [data]);
+
   // Helper functions for filtering
   const isActiveStatus = (status?: string): boolean => status === 'active';
   const isCancelledStatus = (status?: string): boolean => status === 'cancelled';
 
-  // Filter data based on search query and status filter
+  // Filter data based on all filters
   const filteredData = useMemo(() => {
     return data.filter(record => {
       // Apply status filter
@@ -107,6 +122,18 @@ export function ManpowerQuery({
       }
       if (!statusMatch) return false;
 
+      // Apply class filter
+      if (!classMatchesCategory(classFilter, record.class)) return false;
+
+      // Apply date hired month filter
+      if (!dateMatchesMonth(dateHiredMonthFilter, record.date_hired)) return false;
+
+      // Apply birthday month filter
+      if (!dateMatchesMonth(birthdayMonthFilter, record.birthday)) return false;
+
+      // Apply team filter
+      if (!recordMatchesTeam(teamFilter, record.team_name)) return false;
+
       // Apply search filter
       if (!searchQuery.trim()) return true;
       const query = searchQuery.toLowerCase();
@@ -116,11 +143,12 @@ export function ManpowerQuery({
         record.code_number.toLowerCase().includes(query) ||
         record.advisor_email?.toLowerCase().includes(query) ||
         record.unit_code?.toLowerCase().includes(query) ||
+        record.team_name?.toLowerCase().includes(query) ||
         record.status?.toLowerCase().includes(query) ||
         record.class?.toLowerCase().includes(query)
       );
     });
-  }, [data, searchQuery, statusFilter]);
+  }, [data, searchQuery, statusFilter, classFilter, dateHiredMonthFilter, birthdayMonthFilter, teamFilter]);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
@@ -137,6 +165,10 @@ export function ManpowerQuery({
   const handleClearFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
+    setClassFilter('all');
+    setDateHiredMonthFilter('all');
+    setBirthdayMonthFilter('all');
+    setTeamFilter('all');
   };
 
   // Stats-only mode - just return the summary cards
@@ -176,8 +208,17 @@ export function ManpowerQuery({
         <ManpowerSearchFilter
           searchQuery={searchQuery}
           statusFilter={statusFilter}
+          classFilter={classFilter}
+          dateHiredMonthFilter={dateHiredMonthFilter}
+          birthdayMonthFilter={birthdayMonthFilter}
+          teamFilter={teamFilter}
+          availableTeams={availableTeams}
           onSearchChange={handleSearchChange}
           onStatusFilterChange={handleStatusFilterChange}
+          onClassFilterChange={setClassFilter}
+          onDateHiredMonthFilterChange={setDateHiredMonthFilter}
+          onBirthdayMonthFilterChange={setBirthdayMonthFilter}
+          onTeamFilterChange={setTeamFilter}
           onClearSearch={handleClearSearch}
           onClearFilters={handleClearFilters}
         />
