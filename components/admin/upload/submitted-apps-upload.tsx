@@ -241,28 +241,86 @@ export function SubmittedAppsUpload() {
           submitted_apps: record.submitted_apps
         }));
 
-      const response = await fetch('/api/admin/upload/submitted-apps', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: validRecords }),
-      });
+      // For large datasets (>50 records), use batch processing
+      const BATCH_SIZE = 50;
+      let totalInserted = 0;
+      let totalDuplicatesRemoved = 0;
+      let allErrors: string[] = [];
 
-      const result = await response.json();
+      if (validRecords.length > BATCH_SIZE) {
+        console.log(`Processing ${validRecords.length} records in batches of ${BATCH_SIZE}`);
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
+        for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
+          const batch = validRecords.slice(i, i + BATCH_SIZE);
+          const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(validRecords.length / BATCH_SIZE);
+
+          console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} records)`);
+
+          const response = await fetch('/api/admin/upload/submitted-apps', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ data: batch }),
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            console.error(`Batch ${batchNumber} failed:`, result);
+            console.error(`Batch ${batchNumber} error details:`, result.details);
+            throw new Error(result.error || `Batch ${batchNumber} failed`);
+          }
+
+          if (result.success) {
+            totalInserted += result.stats.recordsInserted;
+            totalDuplicatesRemoved += result.stats.duplicatesRemoved;
+            if (result.errors && result.errors.length > 0) {
+              allErrors = allErrors.concat(result.errors);
+            }
+          } else {
+            throw new Error(`Batch ${batchNumber} failed: ${result.errors?.join(', ') || 'Unknown error'}`);
+          }
+        }
+
+        // Create combined result
+        setUploadResult({
+          success: true,
+          message: `Batch upload completed successfully`,
+          stats: {
+            recordsProcessed: validRecords.length,
+            recordsInserted: totalInserted,
+            duplicatesRemoved: totalDuplicatesRemoved,
+            errors: allErrors.length
+          },
+          errors: allErrors.length > 0 ? allErrors : undefined
+        });
+      } else {
+        // Single batch processing for smaller datasets
+        const response = await fetch('/api/admin/upload/submitted-apps', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: validRecords }),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error('Single batch failed:', result);
+          throw new Error(result.error || 'Upload failed');
+        }
+
+        setUploadResult(result);
       }
-
-      setUploadResult(result);
 
       // Clear data on successful upload
-      if (result.success) {
-        setTimeout(() => {
-          clearData();
-        }, 3000); // Clear after 3 seconds to show success message
-      }
+      setTimeout(() => {
+        clearData();
+      }, 3000); // Clear after 3 seconds to show success message
+
     } catch (error) {
       console.error('Upload error:', error);
       setUploadError(error instanceof Error ? error.message : 'Upload failed');
