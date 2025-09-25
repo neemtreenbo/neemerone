@@ -27,30 +27,18 @@ export function UserAvatar({
     lg: 'w-3 h-3 bottom-0.5 right-0.5'
   };
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className={`${sizeClasses[size]} ${className} animate-pulse bg-gray-200 rounded-full flex items-center justify-center`}>
-        <div className="w-2/3 h-2/3 bg-gray-300 rounded-full" />
-      </div>
-    );
-  }
+  // Always ensure we have a display name for fallback
+  const getDisplayName = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
 
-  // No user state
-  if (!user) {
-    return (
-      <div className={`${sizeClasses[size]} ${className} bg-gray-100 rounded-full flex items-center justify-center`}>
-        <svg className="w-2/3 h-2/3 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </svg>
-      </div>
-    );
-  }
-
-  // Get display name
-  const displayName = profile?.first_name && profile?.last_name
-    ? `${profile.first_name} ${profile.last_name}`
-    : user.email?.split('@')[0] || 'User';
+  const displayName = getDisplayName();
 
   // Get initials for fallback
   const getInitials = (name: string) => {
@@ -63,6 +51,42 @@ export function UserAvatar({
   };
 
   const initials = getInitials(displayName);
+
+  // Loading state - but still clickable
+  if (isLoading) {
+    return (
+      <div className={`relative inline-block ${className}`}>
+        <div className={`${sizeClasses[size]} relative`}>
+          <div className={`${sizeClasses[size]} rounded-full bg-gray-300 animate-pulse flex items-center justify-center text-sm border-2 border-white shadow-sm`}>
+            <div className="w-2/3 h-2/3 bg-gray-400 rounded-full" />
+          </div>
+          {showOnlineIndicator && (
+            <div className={`absolute ${indicatorClasses[size]} bg-gray-400 rounded-full border-2 border-white`} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // No user state - show default but still functional
+  if (!user) {
+    return (
+      <div className={`relative inline-block ${className}`}>
+        <div className={`${sizeClasses[size]} relative`}>
+          <div className={`${sizeClasses[size]} rounded-full bg-gray-500 text-white font-medium flex items-center justify-center text-sm border-2 border-white shadow-sm`}>
+            <svg className="w-2/3 h-2/3 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+          </div>
+          {showOnlineIndicator && (
+            <div className={`absolute ${indicatorClasses[size]} bg-red-500 rounded-full border-2 border-white`} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Use the display name and initials we calculated above
 
   return (
     <div className={`relative inline-block ${className}`}>
