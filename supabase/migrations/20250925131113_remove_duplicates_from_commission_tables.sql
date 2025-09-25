@@ -1,5 +1,6 @@
--- Create comprehensive duplicate removal system for all commission tables
+-- OBSOLETE: Create comprehensive duplicate removal system for all commission tables
 -- Identifies exact field matches and keeps the latest record based on created_at
+-- NOTE: This migration is obsolete - duplicate removal is now handled in table-specific upload functions
 
 CREATE OR REPLACE FUNCTION remove_duplicates_from_tables(p_table_names text[])
 RETURNS jsonb AS $$

@@ -1,8 +1,7 @@
--- OBSOLETE: Create RPC function for unified upload with deduplication
--- Description: Handle duplicate detection and bulk insert for all upload tables
--- Author: Claude Code
+-- Restore the working upload_with_deduplication function that was mistakenly removed
+-- This function was actually being used by submitted apps upload and was working correctly
 -- Date: 2025-09-25
--- NOTE: This migration is obsolete - replaced by table-specific upload functions in 20250925140000
+-- Purpose: Fix submitted apps upload that broke after "dead code" cleanup
 
 CREATE OR REPLACE FUNCTION upload_with_deduplication(
   p_table_name text,
@@ -35,6 +34,7 @@ BEGIN
   END IF;
 
   -- Get column names from the first record for insert
+  -- CRITICAL: Exclude updated_at column to prevent errors
   IF jsonb_array_length(p_records) > 0 THEN
     SELECT array_agg(key) INTO insert_columns
     FROM jsonb_object_keys(p_records->0) AS key

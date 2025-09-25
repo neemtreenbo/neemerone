@@ -85,8 +85,8 @@ export async function POST(request: Request) {
     console.log(`Starting submitted apps upload of ${submittedAppsData.length} records`);
     console.log('Sample record:', submittedAppsData[0]);
 
-    // Direct upload with table-specific duplicate detection
-    console.log('Proceeding with upload using table-specific function...');
+    // Use the correct table-specific function
+    console.log('Proceeding with upload using correct function...');
     const { data: result, error: rpcError } = await supabase.rpc('upload_submitted_apps_with_dedup', {
       p_records: submittedAppsData
     });

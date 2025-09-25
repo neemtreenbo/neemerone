@@ -1,6 +1,7 @@
--- Fix RPC function field handling issue
+-- OBSOLETE: Fix RPC function field handling issue
 -- The previous function had issues with jsonb record field extraction
 -- causing "record 'new' has no field 'updated_at'" errors
+-- NOTE: This migration is obsolete - replaced by table-specific upload functions in 20250925140000
 
 CREATE OR REPLACE FUNCTION upload_with_deduplication(
   p_table_name text,

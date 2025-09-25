@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileSpreadsheet, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileSpreadsheet, AlertCircle, CheckCircle, Trash2, Copy, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import { DataPreviewTable } from '../data-preview-table';
 
 interface ParsedSubmittedApp {
@@ -40,6 +41,7 @@ export function SubmittedAppsUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const expectedColumns = [
     { key: 'advisor_code', label: 'Advisor Code', required: true },
@@ -219,6 +221,32 @@ export function SubmittedAppsUpload() {
     setParseErrors([]);
     setUploadResult(null);
     setUploadError(null);
+    setShowSuccessDialog(false);
+  };
+
+  const copyStatsToClipboard = async () => {
+    if (!uploadResult) return;
+
+    const statsText = `Submitted Apps Upload Results:
+• Records processed: ${uploadResult.stats.recordsProcessed}
+• Records inserted: ${uploadResult.stats.recordsInserted}
+• Records updated (duplicates): ${uploadResult.stats.recordsUpdated}
+• Errors: ${uploadResult.stats.errors}`;
+
+    try {
+      await navigator.clipboard.writeText(statsText);
+    } catch (err) {
+      console.error('Failed to copy stats:', err);
+    }
+  };
+
+  const handleUploadMore = () => {
+    clearData();
+  };
+
+  const handleCloseDialog = () => {
+    setShowSuccessDialog(false);
+    // Don't clear data when closing dialog - user might want to see results
   };
 
   const handleUpload = async () => {
@@ -241,140 +269,26 @@ export function SubmittedAppsUpload() {
           submitted_apps: record.submitted_apps
         }));
 
-      // For large datasets (>50 records), use batch processing
-      const BATCH_SIZE = 50;
-      let totalInserted = 0;
-      let totalDuplicatesRemoved = 0;
-      let allErrors: string[] = [];
+      const response = await fetch('/api/admin/upload/submitted-apps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: validRecords }),
+      });
 
-      if (validRecords.length > BATCH_SIZE) {
-        console.log(`Processing ${validRecords.length} records in batches of ${BATCH_SIZE}`);
+      const result = await response.json();
 
-        for (let i = 0; i < validRecords.length; i += BATCH_SIZE) {
-          const batch = validRecords.slice(i, i + BATCH_SIZE);
-          const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-          const totalBatches = Math.ceil(validRecords.length / BATCH_SIZE);
-
-          console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} records)`);
-
-          const response = await fetch('/api/admin/upload/submitted-apps', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ data: batch }),
-          });
-
-          let result;
-          try {
-            const responseText = await response.text();
-            console.log(`Batch ${batchNumber} - Response text:`, responseText);
-
-            if (!responseText) {
-              result = { error: 'Empty response from server' };
-            } else {
-              result = JSON.parse(responseText);
-            }
-          } catch (jsonError) {
-            console.error(`Batch ${batchNumber} - Failed to parse response JSON:`, jsonError);
-            result = { error: `Invalid response format (${response.status}): ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'}` };
-          }
-
-          if (!response.ok) {
-            console.error(`Batch ${batchNumber} failed:`, {
-              status: response.status,
-              statusText: response.statusText,
-              result,
-              url: response.url
-            });
-
-            if (response.status === 401) {
-              throw new Error('Authentication required. Please log in again.');
-            }
-            if (response.status === 403) {
-              throw new Error('Admin access required. Please check your permissions.');
-            }
-            if (response.status === 500) {
-              throw new Error(result?.error || result?.details || `Server error (${response.status}): ${response.statusText}`);
-            }
-            throw new Error(result?.error || result?.message || result?.details || `Batch ${batchNumber} failed (${response.status}: ${response.statusText})`);
-          }
-
-          if (result.success) {
-            totalInserted += result.stats.recordsInserted;
-            totalDuplicatesRemoved += result.stats.recordsUpdated;
-            if (result.errors && result.errors.length > 0) {
-              allErrors = allErrors.concat(result.errors);
-            }
-          } else {
-            throw new Error(`Batch ${batchNumber} failed: ${result.errors?.join(', ') || 'Unknown error'}`);
-          }
-        }
-
-        // Create combined result
-        setUploadResult({
-          success: true,
-          message: `Batch upload completed successfully`,
-          stats: {
-            recordsProcessed: validRecords.length,
-            recordsInserted: totalInserted,
-            recordsUpdated: totalDuplicatesRemoved,
-            errors: allErrors.length
-          },
-          errors: allErrors.length > 0 ? allErrors : undefined
-        });
-      } else {
-        // Single batch processing for smaller datasets
-        const response = await fetch('/api/admin/upload/submitted-apps', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data: validRecords }),
-        });
-
-        let result;
-        try {
-          const responseText = await response.text();
-          console.log('Single batch - Response text:', responseText);
-
-          if (!responseText) {
-            result = { error: 'Empty response from server' };
-          } else {
-            result = JSON.parse(responseText);
-          }
-        } catch (jsonError) {
-          console.error('Failed to parse response JSON:', jsonError);
-          result = { error: `Invalid response format (${response.status}): ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'}` };
-        }
-
-        if (!response.ok) {
-          console.error('Single batch failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            result,
-            url: response.url
-          });
-
-          if (response.status === 401) {
-            throw new Error('Authentication required. Please log in again.');
-          }
-          if (response.status === 403) {
-            throw new Error('Admin access required. Please check your permissions.');
-          }
-          if (response.status === 500) {
-            throw new Error(result?.error || result?.details || `Server error (${response.status}): ${response.statusText}`);
-          }
-          throw new Error(result?.error || result?.message || result?.details || `Upload failed (${response.status}: ${response.statusText})`);
-        }
-
-        setUploadResult(result);
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
       }
 
-      // Clear data on successful upload
-      setTimeout(() => {
-        clearData();
-      }, 3000); // Clear after 3 seconds to show success message
+      setUploadResult(result);
+
+      // Show success dialog
+      if (result.success) {
+        setShowSuccessDialog(true);
+      }
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -486,40 +400,6 @@ export function SubmittedAppsUpload() {
         </Alert>
       )}
 
-      {/* Upload Success */}
-      {uploadResult && uploadResult.success && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <div>{uploadResult.message}</div>
-              <div className="text-sm text-gray-600">
-                • Records processed: {uploadResult.stats.recordsProcessed}
-                • Records inserted: {uploadResult.stats.recordsInserted}
-                • Records updated (duplicates): {uploadResult.stats.recordsUpdated}
-                {uploadResult.stats.errors > 0 && (
-                  <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
-                )}
-              </div>
-              {uploadResult.errors && uploadResult.errors.length > 0 && (
-                <div className="mt-2">
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-red-600">View Errors ({uploadResult.errors.length})</summary>
-                    <ul className="mt-1 list-disc list-inside">
-                      {uploadResult.errors.slice(0, 5).map((error, index) => (
-                        <li key={index} className="text-red-600">{error}</li>
-                      ))}
-                      {uploadResult.errors.length > 5 && (
-                        <li className="text-red-600">... and {uploadResult.errors.length - 5} more errors</li>
-                      )}
-                    </ul>
-                  </details>
-                </div>
-              )}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Data Preview */}
       {parsedData.length > 0 && (
@@ -531,6 +411,99 @@ export function SubmittedAppsUpload() {
           isValidData={isValidData}
         />
       )}
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              <span>Upload Successful!</span>
+            </DialogTitle>
+            <DialogDescription>
+              Your submitted applications data has been uploaded successfully.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-center space-y-3">
+              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Plus className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">New Records</span>
+                </div>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                  {uploadResult?.stats.recordsInserted || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <RotateCcw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Updated (Duplicates)</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                  {uploadResult?.stats.recordsUpdated || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Processed</span>
+                </div>
+                <span className="text-lg font-bold text-gray-600 dark:text-gray-300">
+                  {uploadResult?.stats.recordsProcessed || 0}
+                </span>
+              </div>
+
+              {(uploadResult?.stats.errors || 0) > 0 && (
+                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <span className="text-sm font-medium text-red-700 dark:text-red-300">Errors</span>
+                  </div>
+                  <span className="text-lg font-bold text-red-600 dark:text-red-400">
+                    {uploadResult?.stats.errors}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {uploadResult?.errors && uploadResult.errors.length > 0 && (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-red-600 dark:text-red-400 mb-2">View Error Details</summary>
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg max-h-32 overflow-y-auto border border-red-200 dark:border-red-800">
+                  <ul className="list-disc list-inside space-y-1">
+                    {uploadResult.errors.slice(0, 5).map((error, index) => (
+                      <li key={index} className="text-red-600 dark:text-red-400 text-xs">{error}</li>
+                    ))}
+                    {uploadResult.errors.length > 5 && (
+                      <li className="text-red-600 dark:text-red-400 text-xs">... and {uploadResult.errors.length - 5} more errors</li>
+                    )}
+                  </ul>
+                </div>
+              </details>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={copyStatsToClipboard} className="flex items-center space-x-2">
+              <Copy className="h-4 w-4" />
+              <span>Copy Stats</span>
+            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={handleCloseDialog}>
+                Close
+              </Button>
+              <Button onClick={handleUploadMore} className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Upload More</span>
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

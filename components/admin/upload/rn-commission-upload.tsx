@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { TrendingUp, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TrendingUp, AlertCircle, CheckCircle, Trash2, Copy, Plus, RotateCcw } from 'lucide-react';
 import { DataPreviewTable } from '../data-preview-table';
 
 interface ParsedRNCommission {
@@ -44,6 +45,7 @@ export function RNCommissionUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const expectedColumns = [
     { key: 'code', label: 'Advisor Code', required: true },
@@ -313,6 +315,31 @@ export function RNCommissionUpload() {
     setParseErrors([]);
     setUploadResult(null);
     setUploadError(null);
+    setShowSuccessDialog(false);
+  };
+
+  const copyStatsToClipboard = async () => {
+    if (!uploadResult) return;
+
+    const statsText = `RN Commission Upload Results:
+• Records processed: ${uploadResult.stats.recordsProcessed}
+• Records inserted: ${uploadResult.stats.recordsInserted}
+• Records updated (duplicates): ${uploadResult.stats.recordsUpdated}
+• Errors: ${uploadResult.stats.errors}`;
+
+    try {
+      await navigator.clipboard.writeText(statsText);
+    } catch (err) {
+      console.error('Failed to copy stats:', err);
+    }
+  };
+
+  const handleUploadMore = () => {
+    clearData();
+  };
+
+  const handleCloseDialog = () => {
+    setShowSuccessDialog(false);
   };
 
   const handleUpload = async () => {
@@ -369,11 +396,9 @@ export function RNCommissionUpload() {
 
         setUploadResult(result);
 
-        // Clear data on successful upload
+        // Show success dialog instead of auto-clearing
         if (result.success) {
-          setTimeout(() => {
-            clearData();
-          }, 3000); // Clear after 3 seconds to show success message
+          setShowSuccessDialog(true);
         }
       } catch (fetchError: unknown) {
         clearTimeout(timeoutId);
@@ -490,41 +515,6 @@ export function RNCommissionUpload() {
         </Alert>
       )}
 
-      {/* Upload Success */}
-      {uploadResult && uploadResult.success && (
-        <Alert>
-          <CheckCircle className="h-4 w-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <div>{uploadResult.message}</div>
-              <div className="text-sm text-gray-600">
-                • Records processed: {uploadResult.stats.recordsProcessed}
-                • Records inserted: {uploadResult.stats.recordsInserted}
-                • Records updated (duplicates): {uploadResult.stats.recordsUpdated}
-                {uploadResult.stats.errors > 0 && (
-                  <div className="text-red-600">• Errors: {uploadResult.stats.errors}</div>
-                )}
-              </div>
-              {uploadResult.errors && uploadResult.errors.length > 0 && (
-                <div className="mt-2">
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-red-600">View Errors ({uploadResult.errors.length})</summary>
-                    <ul className="mt-1 list-disc list-inside">
-                      {uploadResult.errors.slice(0, 5).map((error, index) => (
-                        <li key={index} className="text-red-600">{error}</li>
-                      ))}
-                      {uploadResult.errors.length > 5 && (
-                        <li className="text-red-600">... and {uploadResult.errors.length - 5} more errors</li>
-                      )}
-                    </ul>
-                  </details>
-                </div>
-              )}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {parsedData.length > 0 && (
         <DataPreviewTable
           data={parsedData as unknown as Record<string, unknown>[]}
@@ -534,6 +524,99 @@ export function RNCommissionUpload() {
           isValidData={isValidData}
         />
       )}
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <CheckCircle className="h-6 w-6 text-green-500" />
+              <span>Upload Successful!</span>
+            </DialogTitle>
+            <DialogDescription>
+              Your renewal commission data has been uploaded successfully.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="text-center space-y-3">
+              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Plus className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium">New Records</span>
+                </div>
+                <span className="text-lg font-bold text-green-600">
+                  {uploadResult?.stats.recordsInserted || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <RotateCcw className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium">Updated (Duplicates)</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600">
+                  {uploadResult?.stats.recordsUpdated || 0}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium">Total Processed</span>
+                </div>
+                <span className="text-lg font-bold text-gray-600">
+                  {uploadResult?.stats.recordsProcessed || 0}
+                </span>
+              </div>
+
+              {(uploadResult?.stats.errors || 0) > 0 && (
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <span className="text-sm font-medium">Errors</span>
+                  </div>
+                  <span className="text-lg font-bold text-red-600">
+                    {uploadResult?.stats.errors}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {uploadResult?.errors && uploadResult.errors.length > 0 && (
+              <details className="text-sm">
+                <summary className="cursor-pointer text-red-600 mb-2">View Error Details</summary>
+                <div className="bg-red-50 p-3 rounded-lg max-h-32 overflow-y-auto">
+                  <ul className="list-disc list-inside space-y-1">
+                    {uploadResult.errors.slice(0, 5).map((error, index) => (
+                      <li key={index} className="text-red-600 text-xs">{error}</li>
+                    ))}
+                    {uploadResult.errors.length > 5 && (
+                      <li className="text-red-600 text-xs">... and {uploadResult.errors.length - 5} more errors</li>
+                    )}
+                  </ul>
+                </div>
+              </details>
+            )}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={copyStatsToClipboard} className="flex items-center space-x-2">
+              <Copy className="h-4 w-4" />
+              <span>Copy Stats</span>
+            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={handleCloseDialog}>
+                Close
+              </Button>
+              <Button onClick={handleUploadMore} className="flex items-center space-x-2">
+                <Plus className="h-4 w-4" />
+                <span>Upload More</span>
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
