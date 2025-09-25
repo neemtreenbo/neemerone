@@ -50,7 +50,29 @@ export async function updateSession(request: NextRequest) {
 
     if (authError) {
       console.error('Middleware auth error:', authError);
-      // If auth fails, redirect to login
+
+      // Handle rate limiting - avoid redirect loops
+      if (authError.message?.includes('rate limit') || authError.status === 429) {
+        // Return 429 status instead of redirecting to prevent loops
+        return new NextResponse('Rate limit exceeded. Please try again later.', { status: 429 })
+      }
+
+      // For refresh token errors, clear auth cookies and redirect to login
+      if (authError.message?.includes('refresh_token_not_found') || authError.status === 400) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/login'
+        const response = NextResponse.redirect(url)
+
+        // Clear auth cookies to reset auth state
+        response.cookies.delete('sb-access-token')
+        response.cookies.delete('sb-refresh-token')
+        response.cookies.set('sb-access-token', '', { maxAge: 0 })
+        response.cookies.set('sb-refresh-token', '', { maxAge: 0 })
+
+        return response
+      }
+
+      // For other auth errors, redirect to login
       const url = request.nextUrl.clone()
       url.pathname = '/auth/login'
       return NextResponse.redirect(url)

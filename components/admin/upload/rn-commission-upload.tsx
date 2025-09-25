@@ -208,13 +208,13 @@ export function RNCommissionUpload() {
         if (value) item.transaction_type = value;
       }
 
-      // Parse rn_premium_php (currency format)
+      // Parse rn_premium_php (currency format, allows negative values in parentheses and zero)
       if (columnMapping.rn_premium_php !== undefined) {
         const value = cells[columnMapping.rn_premium_php]?.trim();
         if (value) {
           const numValue = parseCurrencyString(value);
-          if (numValue === null || numValue < 0) {
-            rowErrors.push('RN Premium (PHP) must be a positive number (currency format accepted)');
+          if (numValue === null) {
+            rowErrors.push('RN Premium (PHP) must be a valid number (currency format accepted, negatives in parentheses)');
           } else {
             item.rn_premium_php = numValue;
           }

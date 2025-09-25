@@ -265,12 +265,39 @@ export function SubmittedAppsUpload() {
             body: JSON.stringify({ data: batch }),
           });
 
-          const result = await response.json();
+          let result;
+          try {
+            const responseText = await response.text();
+            console.log(`Batch ${batchNumber} - Response text:`, responseText);
+
+            if (!responseText) {
+              result = { error: 'Empty response from server' };
+            } else {
+              result = JSON.parse(responseText);
+            }
+          } catch (jsonError) {
+            console.error(`Batch ${batchNumber} - Failed to parse response JSON:`, jsonError);
+            result = { error: `Invalid response format (${response.status}): ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'}` };
+          }
 
           if (!response.ok) {
-            console.error(`Batch ${batchNumber} failed:`, result);
-            console.error(`Batch ${batchNumber} error details:`, result.details);
-            throw new Error(result.error || `Batch ${batchNumber} failed`);
+            console.error(`Batch ${batchNumber} failed:`, {
+              status: response.status,
+              statusText: response.statusText,
+              result,
+              url: response.url
+            });
+
+            if (response.status === 401) {
+              throw new Error('Authentication required. Please log in again.');
+            }
+            if (response.status === 403) {
+              throw new Error('Admin access required. Please check your permissions.');
+            }
+            if (response.status === 500) {
+              throw new Error(result?.error || result?.details || `Server error (${response.status}): ${response.statusText}`);
+            }
+            throw new Error(result?.error || result?.message || result?.details || `Batch ${batchNumber} failed (${response.status}: ${response.statusText})`);
           }
 
           if (result.success) {
@@ -306,11 +333,39 @@ export function SubmittedAppsUpload() {
           body: JSON.stringify({ data: validRecords }),
         });
 
-        const result = await response.json();
+        let result;
+        try {
+          const responseText = await response.text();
+          console.log('Single batch - Response text:', responseText);
+
+          if (!responseText) {
+            result = { error: 'Empty response from server' };
+          } else {
+            result = JSON.parse(responseText);
+          }
+        } catch (jsonError) {
+          console.error('Failed to parse response JSON:', jsonError);
+          result = { error: `Invalid response format (${response.status}): ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON error'}` };
+        }
 
         if (!response.ok) {
-          console.error('Single batch failed:', result);
-          throw new Error(result.error || 'Upload failed');
+          console.error('Single batch failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            result,
+            url: response.url
+          });
+
+          if (response.status === 401) {
+            throw new Error('Authentication required. Please log in again.');
+          }
+          if (response.status === 403) {
+            throw new Error('Admin access required. Please check your permissions.');
+          }
+          if (response.status === 500) {
+            throw new Error(result?.error || result?.details || `Server error (${response.status}): ${response.statusText}`);
+          }
+          throw new Error(result?.error || result?.message || result?.details || `Upload failed (${response.status}: ${response.statusText})`);
         }
 
         setUploadResult(result);
